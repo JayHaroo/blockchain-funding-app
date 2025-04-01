@@ -3,37 +3,69 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import Image from "next/image";
-import BlockchainNetwork from "@/components/blockchain-network";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
       {/* Hero Section - Redesigned to match the image */}
       <section className="relative overflow-hidden py-20 lg:py-28">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-gray-900/40 to-black"></div>
-          <div className="absolute inset-0 bg-[url('/dot-pattern.png')] bg-repeat opacity-30"></div>
+        {/* Background Layers */}
+        <div className="absolute inset-0 z-0 flex items-center justify-center">
+          {/* Background Image 1 (Further Back) */}
+          <div className="absolute w-[80%] opacity-20">
+            <Image
+              src="/fundchain/2.webp"
+              alt="Background Placeholder 1"
+              width={800}
+              height={600}
+              className="object-cover mx-auto"
+            />
+          </div>
+
+          {/* Background Image 2 (Directly Behind Button) */}
+          <div className="absolute w-[60%] opacity-30">
+            <Image
+              src="/fundchain/4.webp"
+              alt="Background Placeholder 2"
+              width={700}
+              height={100}
+              className="object-cover mx-auto"
+            />
+          </div>
         </div>
 
         <div className="container relative z-10 mx-auto px-4">
           <div className="flex flex-col items-center justify-center">
-            {/* Blockchain Network Component */}
-            <div className="w-full max-w-5xl mx-auto mb-16">
-              <BlockchainNetwork />
+            {/* Main Image & Button */}
+            <div className="relative flex items-center justify-center w-full max-w-2xl">
+              <Image
+                src="/fundchain/1.webp"
+                alt="Placeholder"
+                width={600}
+                height={450}
+                className="object-contain"
+              />
+
+              {/* Centered Button (Adjusted Position) */}
+              <div className="absolute top-[40%] flex items-center justify-center">
+                <Button className="bg-blue-600 hover:bg-blue-700 px-12 py-4 text-lg rounded-lg">
+                  Explore FundChain
+                </Button>
+              </div>
             </div>
 
-            {/* Hero Text */}
-            <div className="text-center">
-              <h1 className="mb-8 text-4xl font-bold leading-tight md:text-5xl lg:text-6xl">
+            {/* Text Below */}
+            <div className="mt-6 max-w-2xl text-center text-white">
+              <p>
                 A{" "}
-                <span className="text-blue-500">
+                <span className="font-bold text-blue-500">
                   transparent, secure, and decentralized
                 </span>{" "}
                 crowdfunding.
-              </h1>
-              <p className="mx-auto mb-12 max-w-3xl text-lg text-gray-300 md:text-xl">
+              </p>
+              <p>
                 Our platform connects passionate change makers, innovators, and
-                supporters, creating a trusted space where funding thrive and
+                supporters, creating a trusted space where funding thrives and
                 every contribution counts.
               </p>
             </div>

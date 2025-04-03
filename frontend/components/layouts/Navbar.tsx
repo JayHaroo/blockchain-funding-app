@@ -70,13 +70,19 @@ export function Navbar() {
               className="w-56 bg-gray-900/95 backdrop-blur-md border border-blue-900/30 text-white rounded-xl overflow-hidden shadow-xl shadow-blue-900/20"
             >
               <DropdownMenuItem className="py-3 px-4 hover:bg-blue-900/30 cursor-pointer transition-colors duration-200 focus:bg-blue-900/40">
-                Create Fundraiser
+                <Link href="/fundraiser/create" className="w-full block">
+                  Create Fundraiser
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="py-3 px-4 hover:bg-blue-900/30 cursor-pointer transition-colors duration-200 focus:bg-blue-900/40">
-                Browse Projects
+                <Link href="/projects" className="w-full block">
+                  Browse Projects
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="py-3 px-4 hover:bg-blue-900/30 cursor-pointer transition-colors duration-200 focus:bg-blue-900/40">
-                My Donations
+                <Link href="/donations" className="w-full block">
+                  My Donations
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

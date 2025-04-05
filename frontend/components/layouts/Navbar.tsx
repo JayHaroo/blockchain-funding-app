@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { ConnectButton } from "@rainbow-me/rainbowkit"; // Import ConnectButton
 
 export function Navbar() {
   const router = useRouter();
@@ -160,6 +161,18 @@ export function Navbar() {
               </Link>
             </div>
           )}
+
+          {/* Connect Wallet Button */}
+          <div className="ml-4">
+            <div className="bg-transparent text-white hover:bg-[#3A3B3C] focus:ring-2 focus:ring-blue-500 rounded-full">
+              <ConnectButton
+                accountStatus="address"
+                showBalance={false}
+                chainStatus="icon"
+                label="Connect Wallet"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </nav>

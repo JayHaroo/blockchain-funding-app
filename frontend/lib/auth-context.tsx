@@ -15,6 +15,11 @@ type User = {
   avatar?: string;
 };
 
+// Define a type for the user with password for storage
+type UserWithPassword = User & {
+  password: string;
+};
+
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
@@ -56,14 +61,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
+      const users = JSON.parse(
+        localStorage.getItem("users") || "[]"
+      ) as UserWithPassword[];
       const foundUser = users.find(
-        (u: any) => u.email === email && u.password === password
+        (u) => u.email === email && u.password === password
       );
 
       if (!foundUser) throw new Error("Invalid email or password");
 
-      const { password: _, ...userWithoutPassword } = foundUser;
+      // Use object destructuring and omit password
+      const { password: passwordToOmit, ...userWithoutPassword } = foundUser;
       localStorage.setItem("user", JSON.stringify(userWithoutPassword));
       setUser(userWithoutPassword);
       return true;
@@ -84,8 +92,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      const userExists = users.some((u: any) => u.email === email);
+      const users = JSON.parse(
+        localStorage.getItem("users") || "[]"
+      ) as UserWithPassword[];
+      const userExists = users.some((u) => u.email === email);
       if (userExists) throw new Error("User already exists");
 
       const newUser = {
@@ -97,7 +107,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       };
 
       localStorage.setItem("users", JSON.stringify([...users, newUser]));
-      const { password: _, ...userWithoutPassword } = newUser;
+      // Use object destructuring and omit password
+      const { password: passwordToOmit, ...userWithoutPassword } = newUser;
       localStorage.setItem("user", JSON.stringify(userWithoutPassword));
       setUser(userWithoutPassword);
       return true;
@@ -126,8 +137,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
       // Update the user in the users array if it exists
-      const users = JSON.parse(localStorage.getItem("users") || "[]");
-      const updatedUsers = users.map((u: any) =>
+      const users = JSON.parse(
+        localStorage.getItem("users") || "[]"
+      ) as UserWithPassword[];
+      const updatedUsers = users.map((u) =>
         u.id === user.id ? { ...u, ...updates } : u
       );
       localStorage.setItem("users", JSON.stringify(updatedUsers));

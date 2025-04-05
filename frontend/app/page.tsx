@@ -2,9 +2,13 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { useAuth } from "@/lib/auth-context";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
+  const { user } = useAuth();
+
   return (
     <main className="min-h-screen bg-black text-white">
       {/* Hero Section - Redesigned to match the image */}
@@ -48,9 +52,11 @@ export default function Home() {
 
               {/* Centered Button (Adjusted Position) */}
               <div className="absolute top-[40%] flex items-center justify-center">
-                <Button className="bg-blue-600 hover:bg-blue-700 px-12 py-4 text-lg rounded-lg">
-                  Explore FundChain
-                </Button>
+                <Link href={user ? "/projects" : "/sign-up"}>
+                  <Button className="bg-blue-600 hover:bg-blue-700 px-12 py-4 text-lg rounded-lg">
+                    {user ? "Explore Projects" : "Join FundChain"}
+                  </Button>
+                </Link>
               </div>
             </div>
 
@@ -151,9 +157,11 @@ export default function Home() {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-center border-t border-gray-700 p-4">
-                <Button className="bg-blue-600 hover:bg-blue-700">
-                  DONATE
-                </Button>
+                <Link href={user ? "/fundraiser/f1" : "/sign-in"}>
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    {user ? "DONATE" : "SIGN IN TO DONATE"}
+                  </Button>
+                </Link>
               </CardFooter>
             </Card>
 
@@ -170,9 +178,11 @@ export default function Home() {
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-center border-t border-gray-700 p-4">
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    DONATE
-                  </Button>
+                  <Link href={user ? `/fundraiser/f${i + 1}` : "/sign-in"}>
+                    <Button className="bg-blue-600 hover:bg-blue-700">
+                      {user ? "DONATE" : "SIGN IN TO DONATE"}
+                    </Button>
+                  </Link>
                 </CardFooter>
               </Card>
             ))}

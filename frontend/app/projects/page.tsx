@@ -568,7 +568,7 @@ export default function ProjectsPage() {
             {/* End of Results */}
             {!hasMore && !loading && (
               <div className="text-center my-6 text-gray-500 bg-white rounded-lg shadow p-4">
-                You've reached the end of the projects list.
+                {"You've reached the end of the projects list."}
               </div>
             )}
           </div>

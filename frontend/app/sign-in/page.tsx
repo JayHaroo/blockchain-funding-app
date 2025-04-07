@@ -120,7 +120,7 @@ export default function SignInPage() {
 
           <div className="mt-6 text-center">
             <p className="text-[#B0B3B8]">
-              Don't have an account?{" "}
+              {"Don't have an account? "}
               <Link href="/sign-up" className="text-blue-400 hover:underline">
                 Sign Up
               </Link>

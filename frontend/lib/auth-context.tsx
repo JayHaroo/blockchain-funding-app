@@ -70,8 +70,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (!foundUser) throw new Error("Invalid email or password");
 
-      // Use object destructuring and omit password
-      const { password: passwordToOmit, ...userWithoutPassword } = foundUser;
+      // Use object destructuring and omit password with _password prefix
+      const { password: _password, ...userWithoutPassword } = foundUser;
       localStorage.setItem("user", JSON.stringify(userWithoutPassword));
       setUser(userWithoutPassword);
       return true;
@@ -107,8 +107,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       };
 
       localStorage.setItem("users", JSON.stringify([...users, newUser]));
-      // Use object destructuring and omit password
-      const { password: passwordToOmit, ...userWithoutPassword } = newUser;
+      // Use object destructuring and omit password with _password prefix
+      const { password: _password, ...userWithoutPassword } = newUser;
+
       localStorage.setItem("user", JSON.stringify(userWithoutPassword));
       setUser(userWithoutPassword);
       return true;

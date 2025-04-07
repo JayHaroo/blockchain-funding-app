@@ -4,6 +4,7 @@ import React from "react";
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 import { ArrowRight, ArrowLeft, Upload, Heart } from "lucide-react";
 
@@ -271,7 +272,7 @@ export default function CreateFundraiserPage() {
                   {formData.coverImageUrl && (
                     <div className="mt-3">
                       <div className="relative w-full h-40 rounded-lg overflow-hidden border border-blue-500/30">
-                        <img
+                        <Image
                           src={formData.coverImageUrl || "/placeholder.svg"}
                           alt="Cover preview"
                           className="w-full h-full object-cover"
@@ -361,7 +362,7 @@ export default function CreateFundraiserPage() {
                       Cover Image
                     </p>
                     <div className="mt-2 relative w-full h-32 rounded-lg overflow-hidden border border-blue-500/30">
-                      <img
+                      <Image
                         src={formData.coverImageUrl || "/placeholder.svg"}
                         alt="Cover preview"
                         className="w-full h-full object-cover"

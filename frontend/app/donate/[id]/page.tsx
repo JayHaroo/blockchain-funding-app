@@ -136,15 +136,21 @@ export default function DonatePage({ params }: { params: { id: string } }) {
                 <div className="mb-6">
                   <div className="flex justify-between mb-2">
                     <span className="text-sm font-medium">Select Token</span>
-                    <span className="text-sm text-gray-500">$USD</span>
+                    <span className="text-sm text-gray-500">
+                      {selectedToken || "$USD"}
+                    </span>
                   </div>
                   <div className="flex">
-                    <Button
-                      variant="outline"
-                      className="rounded-r-none border-r-0 flex-1 justify-between"
+                    <select
+                      className="border border-gray-300 rounded-l-none px-4 py-2 w-1/3"
+                      value={selectedToken}
+                      onChange={(e) => setSelectedToken(e.target.value)}
                     >
-                      Select Token <ChevronRight size={16} />
-                    </Button>
+                      <option value="$USD">$USD</option>
+                      <option value="ETH">ETH</option>
+                      <option value="BTC">BTC</option>
+                      <option value="DAI">DAI</option>
+                    </select>
                     <input
                       type="text"
                       value={amount}

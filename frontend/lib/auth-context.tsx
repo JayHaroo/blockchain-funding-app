@@ -15,7 +15,6 @@ type User = {
   avatar?: string;
 };
 
-// Define a type for the user with password for storage
 type UserWithPassword = User & {
   password: string;
 };
@@ -35,22 +34,30 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const validImageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+function isValidImagePath(path: string): boolean {
+  return validImageExtensions.some((ext) => path.toLowerCase().endsWith(ext));
+}
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load user session from localStorage
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     } else {
-      // Simulated default user (optional for demo purposes)
+      const fallbackAvatar = "/avatar.jpg";
+      const avatar = isValidImagePath(fallbackAvatar)
+        ? fallbackAvatar
+        : undefined;
+
       setUser({
         id: "default_user",
         name: "John Doe",
         email: "john.doe@example.com",
-        avatar: "/avatar.jpg",
+        avatar,
       });
     }
     setIsLoading(false);
@@ -70,8 +77,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (!foundUser) throw new Error("Invalid email or password");
 
-      // Use object destructuring and omit password with _password prefix
-      const { password: _password, ...userWithoutPassword } = foundUser;
+      // Fix: Use rest operator without naming the excluded property
+      const { password: _, ...userWithoutPassword } = foundUser;
+
+      // Optional: check if avatar is valid
+      if (
+        userWithoutPassword.avatar &&
+        !isValidImagePath(userWithoutPassword.avatar)
+      ) {
+        userWithoutPassword.avatar = undefined;
+      }
+
       localStorage.setItem("user", JSON.stringify(userWithoutPassword));
       setUser(userWithoutPassword);
       return true;
@@ -98,17 +114,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const userExists = users.some((u) => u.email === email);
       if (userExists) throw new Error("User already exists");
 
+      const avatar = "/avatar.jpg";
       const newUser = {
         id: `user_${Date.now()}`,
         email,
         password,
         name,
-        avatar: `/avatar.jpg`,
+        avatar: isValidImagePath(avatar) ? avatar : undefined,
       };
 
       localStorage.setItem("users", JSON.stringify([...users, newUser]));
-      // Use object destructuring and omit password with _password prefix
-      const { password: _password, ...userWithoutPassword } = newUser;
+
+      // Fix: Use rest operator without naming the excluded property
+      const { password: _, ...userWithoutPassword } = newUser;
 
       localStorage.setItem("user", JSON.stringify(userWithoutPassword));
       setUser(userWithoutPassword);
@@ -126,23 +144,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(null);
   };
 
-  // Add updateUser function to update user properties globally
   const updateUser = (updates: Partial<User>) => {
     if (user) {
-      const updatedUser = { ...user, ...updates };
+      let avatar = updates.avatar;
+      if (avatar && !isValidImagePath(avatar)) {
+        avatar = undefined;
+      }
 
-      // Update local state
+      const updatedUser = { ...user, ...updates, avatar };
+
       setUser(updatedUser);
-
-      // Update localStorage
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      // Update the user in the users array if it exists
       const users = JSON.parse(
         localStorage.getItem("users") || "[]"
       ) as UserWithPassword[];
       const updatedUsers = users.map((u) =>
-        u.id === user.id ? { ...u, ...updates } : u
+        u.id === user.id ? { ...u, ...updates, avatar } : u
       );
       localStorage.setItem("users", JSON.stringify(updatedUsers));
     }

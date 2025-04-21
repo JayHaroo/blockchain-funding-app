@@ -5,20 +5,63 @@ import React from "react";
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 
 import { ArrowRight, ArrowLeft, Upload, Heart } from "lucide-react";
 
-export default function CreateFundraiserPage() {
+// Rich text editor icons and components
+const EditorIcons = {
+  H1: () => <span className="font-bold">H1</span>,
+  H2: () => <span className="font-bold">H2</span>,
+  Bold: () => <span className="font-bold">B</span>,
+  Italic: () => <span className="italic">I</span>,
+  Underline: () => <span className="underline">U</span>,
+  Quote: () => <span>"</span>,
+  List: () => <span>•</span>,
+  Link: () => <span>🔗</span>,
+  Image: () => <span>📷</span>,
+  Code: () => <span>{"</>"}</span>,
+};
+
+interface FundraiserFormData {
+  name: string;
+  description: string;
+  socialLinks: string[];
+  category: string;
+  otherCategory?: string;
+  location: string;
+  displayImage?: string | null;
+  supportingImages: File[];
+  walletAddress: string;
+  goal: number;
+  endDate: string;
+  acceptedTokens: string[];
+  minimumDonation: number;
+  blockchain: string;
+}
+
+const CATEGORIES = [
+  "Animals", "Business", "Calamity", "Community",
+  "Competition", "Creative", "Education", "Events",
+  "Faith", "Family", "Funerals", "Medical", "Sports"
+];
+
+export default function CreateFundraiser() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    title: "",
+  const [formData, setFormData] = useState<FundraiserFormData>({
+    name: "",
     description: "",
+    socialLinks: ["", ""],
     category: "",
-    goal: "",
-    endDate: "",
-    coverImage: null as File | null,
-    coverImageUrl: "",
+    location: "",
+    supportingImages: [],
+    walletAddress: "",
+    goal: 0,
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    acceptedTokens: ["USD", "ETH", "BTC", "DAI"],
+    minimumDonation: 1,
+    blockchain: "Ethereum"
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -35,12 +78,16 @@ export default function CreateFundraiserPage() {
   }, []);
 
   const handleNext = useCallback(() => {
-    setStep((prev) => prev + 1);
-  }, []);
+    if (step < 4) {
+      setStep(step + 1);
+    }
+  }, [step]);
 
   const handleBack = useCallback(() => {
-    setStep((prev) => Math.max(1, prev - 1));
-  }, []);
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  }, [step]);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,8 +95,7 @@ export default function CreateFundraiserPage() {
         const file = e.target.files[0];
         setFormData((prev) => ({
           ...prev,
-          coverImage: file,
-          coverImageUrl: URL.createObjectURL(file),
+          displayImage: URL.createObjectURL(file),
         }));
       }
     },
@@ -61,23 +107,15 @@ export default function CreateFundraiserPage() {
 
     // Simulate saving to database
     setTimeout(() => {
-      // Create a new fundraiser object
-      const newFundraiser = {
+      // Create a new fundraiser object with complete data
+      const fundraiserData = {
         id: `f${Date.now()}`,
-        title: formData.title || "Untitled Fundraiser",
-        organizer: "Your Name", // In a real app, this would be the logged-in user
-        organizerAvatar: "/placeholder.svg?height=40&width=40",
-        description: formData.description || "No description provided",
-        category: formData.category || "Other",
-        goal: Number.parseFloat(formData.goal) || 1000,
-        raised: 0, // New fundraiser starts with 0
-        daysLeft: 30, // Default to 30 days if no end date
-        coverImage:
-          formData.coverImageUrl || "/placeholder.svg?height=300&width=600",
-        isLiked: false,
-        likes: 0,
-        comments: 0,
-        shares: 0,
+        ...formData,
+        status: "active",
+        createdAt: new Date().toISOString(),
+        raised: 0,
+        goal: formData.goal,
+        supporters: 0
       };
 
       // In a real app, you would save this to a database
@@ -87,321 +125,310 @@ export default function CreateFundraiserPage() {
       );
       localStorage.setItem(
         "fundraisers",
-        JSON.stringify([newFundraiser, ...existingFundraisers])
+        JSON.stringify([fundraiserData, ...existingFundraisers])
       );
+
+      // Also store the project data separately for the donation system
+      const projectsData = JSON.parse(
+        localStorage.getItem("projectsData") || "{}"
+      );
+      projectsData[fundraiserData.id] = {
+        id: fundraiserData.id,
+        title: fundraiserData.name,
+        description: fundraiserData.description,
+        image: fundraiserData.displayImage,
+        goal: fundraiserData.goal,
+        raised: 0,
+        category: fundraiserData.category,
+        endDate: fundraiserData.endDate,
+        acceptedTokens: fundraiserData.acceptedTokens,
+        minimumDonation: fundraiserData.minimumDonation,
+        blockchain: fundraiserData.blockchain
+      };
+      localStorage.setItem("projectsData", JSON.stringify(projectsData));
 
       // Redirect to the projects page
       router.push("/projects");
     }, 1500);
   }, [formData, router]);
 
+  const handlePreview = () => {
+    // Save draft to localStorage
+    const fundraisers = JSON.parse(localStorage.getItem("fundraisers") || "[]");
+    const draftFundraiser = {
+      id: `f${Date.now()}`,
+      ...formData,
+      status: "draft",
+      createdAt: new Date().toISOString(),
+      raised: 0,
+      goal: formData.goal,
+      supporters: 0
+    };
+    fundraisers.push(draftFundraiser);
+    localStorage.setItem("fundraisers", JSON.stringify(fundraisers));
+    
+    // Navigate to preview
+    router.push(`/fundraiser/preview/${draftFundraiser.id}`);
+  };
+
+  const handlePublish = async () => {
+    setIsSubmitting(true);
+    try {
+      // Simulate blockchain transaction
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Create fundraiser data with proper typing
+      const fundraiserData: FundraiserFormData & {
+        id: string;
+        createdAt: string;
+        raised: number;
+        supporters: number;
+      } = {
+        id: `f${Date.now()}`,
+        ...formData,
+        displayImage: formData.displayImage || null,
+        createdAt: new Date().toISOString(),
+        raised: 0,
+        goal: formData.goal,
+        supporters: 0
+      };
+
+      // Save to localStorage
+      const existingFundraisers = JSON.parse(localStorage.getItem('fundraisers') || '[]');
+      localStorage.setItem('fundraisers', JSON.stringify([fundraiserData, ...existingFundraisers]));
+
+      // Save project data
+      const projectData = {
+        id: fundraiserData.id,
+        name: formData.name,
+        description: formData.description,
+        createdAt: new Date().toISOString(),
+        raised: 0,
+        goal: formData.goal,
+        supporters: 0,
+        endDate: formData.endDate,
+        acceptedTokens: formData.acceptedTokens,
+        minimumDonation: formData.minimumDonation,
+        blockchain: formData.blockchain,
+        displayImage: formData.displayImage || null
+      };
+
+      const existingProjects = JSON.parse(localStorage.getItem('projectsData') || '[]');
+      localStorage.setItem('projectsData', JSON.stringify([projectData, ...existingProjects]));
+
+      router.push('/projects');
+    } catch (error) {
+      console.error('Error publishing fundraiser:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const renderStep = () => {
     switch (step) {
       case 1:
         return (
-          <div className="space-y-5">
-            <h2 className="text-2xl font-bold text-center text-white">
-              Start Your <span className="text-blue-400">Fundraiser</span>
-            </h2>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label
-                  htmlFor="title"
-                  className="text-sm text-blue-300 font-medium"
-                >
-                  Fundraiser Name
-                </label>
-                <input
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  placeholder="Give your fundraiser a compelling name..."
-                  className="w-full px-4 py-3 rounded-lg bg-gray-800/80 border border-blue-500/50 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                />
-              </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="description"
-                  className="text-sm text-blue-300 font-medium"
-                >
-                  Description
-                </label>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                FUNDRAISE Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={handleInputChange}
+                name="name"
+                className="w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white"
+                placeholder="Enter your fundraiser name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Tell us about your FUNDRAISE...
+              </label>
+              <div className="bg-[#1B2333] rounded-lg overflow-hidden">
+                <div className="border-b border-gray-700 p-2 flex items-center space-x-2">
+                  {Object.entries(EditorIcons).map(([key, Icon]) => (
+                    <button
+                      key={key}
+                      className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white"
+                    >
+                      <Icon />
+                    </button>
+                  ))}
+                </div>
                 <textarea
-                  id="description"
-                  name="description"
                   value={formData.description}
                   onChange={handleInputChange}
-                  placeholder="Tell your story and why this fundraiser matters..."
-                  className="w-full px-4 py-3 rounded-lg min-h-[150px] bg-gray-800/80 border border-blue-500/50 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                  name="description"
+                  className="w-full bg-transparent p-4 min-h-[200px] text-white"
+                  placeholder="Describe your fundraiser..."
                 />
               </div>
-            </div>
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={handleNext}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 font-medium transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40"
-              >
-                Continue
-                <ArrowRight className="h-4 w-4" />
-              </button>
             </div>
           </div>
         );
       case 2:
         return (
-          <div className="space-y-5">
-            <h2 className="text-2xl font-bold text-center text-white">
-              <span className="text-blue-400">Categorize</span> Your Fundraiser
-            </h2>
-            <div className="space-y-4">
-              <p className="text-sm text-blue-300 font-medium">
-                Select a category
-              </p>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                {[
-                  ["Community", "Medical"],
-                  ["Education", "Emergency"],
-                  ["Animals", "Environment"],
-                  ["Technology", "Arts"],
-                ].map((row, rowIndex) => (
-                  <React.Fragment key={`row-${rowIndex}`}>
-                    {row.map((category) => (
-                      <button
-                        key={category}
-                        className={`px-3 py-2.5 rounded-lg border ${
-                          formData.category === category
-                            ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20"
-                            : "bg-gray-800/80 text-white border-gray-700 hover:bg-blue-600/30 hover:border-blue-500/50 transition-all"
-                        }`}
-                        onClick={() => handleCategorySelect(category)}
-                      >
-                        {category}
-                      </button>
-                    ))}
-                  </React.Fragment>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Social Media Links
+              </label>
+              <div className="space-y-2">
+                {formData.socialLinks.map((link, index) => (
+                  <input
+                    key={index}
+                    type="url"
+                    value={link}
+                    onChange={handleInputChange}
+                    name={`socialLinks.${index}`}
+                    className="w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white"
+                    placeholder="Add your social media link"
+                  />
                 ))}
               </div>
-              <div className="space-y-2 mt-4">
-                <label
-                  htmlFor="goal"
-                  className="text-sm text-blue-300 font-medium"
-                >
-                  Fundraising Goal
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                    $
-                  </span>
-                  <input
-                    id="goal"
-                    name="goal"
-                    value={formData.goal}
-                    onChange={handleInputChange}
-                    placeholder="Amount"
-                    type="number"
-                    className="w-full pl-8 pr-4 py-3 rounded-lg bg-gray-800/80 border border-blue-500/50 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  />
-                </div>
-              </div>
+              <p className="text-xs text-gray-400 mt-1">Add your project's social media links</p>
             </div>
-            <div className="flex justify-between pt-2">
-              <button
-                onClick={handleBack}
-                className="border border-blue-500/50 text-white px-5 py-2.5 rounded-lg hover:bg-blue-600/30 flex items-center gap-2 transition-all"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </button>
-              <button
-                onClick={handleNext}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 font-medium transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40"
-              >
-                Continue
-                <ArrowRight className="h-4 w-4" />
-              </button>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Category</label>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => handleCategorySelect(category)}
+                    className={`px-4 py-2 rounded-full text-sm ${
+                      formData.category === category
+                        ? "bg-[#0066FF] text-white"
+                        : "bg-[#1B2333] text-gray-400 hover:bg-[#232B3D]"
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setFormData({ ...formData, category: "Other" })}
+                  className={`px-4 py-2 rounded-full text-sm ${
+                    formData.category === "Other"
+                      ? "bg-[#0066FF] text-white"
+                      : "bg-[#1B2333] text-gray-400 hover:bg-[#232B3D]"
+                  }`}
+                >
+                  Other
+                </button>
+              </div>
+              {formData.category === "Other" && (
+                <input
+                  type="text"
+                  value={formData.otherCategory}
+                  onChange={handleInputChange}
+                  name="otherCategory"
+                  className="mt-2 w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white"
+                  placeholder="Specify category"
+                />
+              )}
             </div>
           </div>
         );
       case 3:
         return (
-          <div className="space-y-5">
-            <h2 className="text-2xl font-bold text-center text-white">
-              <span className="text-blue-400">Finalize</span> Your Campaign
-            </h2>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label
-                  htmlFor="endDate"
-                  className="text-sm text-blue-300 font-medium"
-                >
-                  Campaign end date
-                </label>
-                <input
-                  id="endDate"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleInputChange}
-                  type="date"
-                  className="w-full px-4 py-3 rounded-lg bg-gray-800/80 border border-blue-500/50 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                />
-              </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="coverImage"
-                  className="text-sm text-blue-300 font-medium"
-                >
-                  Upload cover image
-                </label>
-                <div className="space-y-3">
-                  <input
-                    id="coverImage"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="coverImage"
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-blue-500/50 text-white hover:bg-blue-600/30 cursor-pointer transition-all"
-                  >
-                    <Upload className="h-4 w-4" />
-                    {formData.coverImage ? "Change Image" : "Choose File"}
-                  </label>
-
-                  {formData.coverImageUrl && (
-                    <div className="mt-3">
-                      <div className="relative w-full h-40 rounded-lg overflow-hidden border border-blue-500/30">
-                        <Image
-                          src={formData.coverImageUrl || "/placeholder.svg"}
-                          alt="Cover preview"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <p className="mt-2 text-sm text-blue-300">
-                        Selected: {formData.coverImage?.name}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-2">Location</label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={handleInputChange}
+                name="location"
+                className="w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white"
+                placeholder="Enter location"
+              />
             </div>
-            <div className="flex justify-between pt-2">
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Add image to your FUNDRAISE
+              </label>
               <button
-                onClick={handleBack}
-                className="border border-blue-500/50 text-white px-5 py-2.5 rounded-lg hover:bg-blue-600/30 flex items-center gap-2 transition-all"
+                onClick={() => document.getElementById("displayImage")?.click()}
+                className="w-full bg-[#0066FF] text-white py-2 rounded-lg hover:bg-[#0052CC]"
               >
-                <ArrowLeft className="h-4 w-4" />
-                Back
+                Upload display image
               </button>
-              <button
-                onClick={handleNext}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 font-medium transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40"
-              >
-                Review
-                <ArrowRight className="h-4 w-4" />
-              </button>
+              <input
+                id="displayImage"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Add supporting image
+              </label>
+              <div className="border-2 border-dashed border-gray-700 rounded-lg p-8 text-center">
+                <div className="mb-4">
+                  <Image
+                    src="/placeholder.svg"
+                    alt="Upload"
+                    width={48}
+                    height={48}
+                    className="mx-auto"
+                  />
+                </div>
+                <p className="text-sm text-gray-400 mb-2">
+                  Drag & drop an image here or, upload from device.
+                </p>
+                <p className="text-xs text-gray-500">
+                  Suggested image size: 960px width by 600px height. Max image size is 4MB.
+                </p>
+              </div>
             </div>
           </div>
         );
       case 4:
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-center text-white">
-              <span className="text-blue-400">Review</span> Your Fundraiser
-            </h2>
-            <div className="bg-gray-800/50 rounded-lg p-5 space-y-4 border border-blue-500/20">
-              <div className="text-center space-y-1">
-                <h3 className="text-white text-xl font-bold">
-                  {formData.title || "Untitled Fundraiser"}
-                </h3>
-                <p className="text-blue-300 text-sm">
-                  {formData.category || "No category selected"}
-                </p>
-              </div>
-
-              <div className="space-y-3 pt-2">
-                {formData.description && (
-                  <div>
-                    <p className="text-xs text-blue-300 uppercase font-medium">
-                      Description
-                    </p>
-                    <p className="text-white/80 text-sm line-clamp-3">
-                      {formData.description}
-                    </p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  {formData.goal && (
-                    <div>
-                      <p className="text-xs text-blue-300 uppercase font-medium">
-                        Goal
-                      </p>
-                      <p className="text-white text-lg font-medium">
-                        ${formData.goal}
-                      </p>
-                    </div>
-                  )}
-
-                  {formData.endDate && (
-                    <div>
-                      <p className="text-xs text-blue-300 uppercase font-medium">
-                        End Date
-                      </p>
-                      <p className="text-white text-lg font-medium">
-                        {formData.endDate}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {formData.coverImageUrl && (
-                  <div>
-                    <p className="text-xs text-blue-300 uppercase font-medium">
-                      Cover Image
-                    </p>
-                    <div className="mt-2 relative w-full h-32 rounded-lg overflow-hidden border border-blue-500/30">
-                      <Image
-                        src={formData.coverImageUrl || "/placeholder.svg"}
-                        alt="Cover preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+            <div>
+              <h2 className="text-lg font-medium mb-4">Receiving funds thru</h2>
+              <p className="text-sm text-gray-400 mb-4">
+                Set up your address to receive donations. The more chains you set up the more likely
+                it is to receive donations.
+              </p>
+              <button
+                onClick={() => {
+                  // Add wallet connection logic here
+                  setFormData({ ...formData, walletAddress: "0x..." });
+                }}
+                className="text-[#0066FF] hover:underline"
+              >
+                Add address →
+              </button>
             </div>
 
-            <div className="flex flex-col gap-3 pt-2">
+            <div className="pt-8 flex items-center space-x-4">
               <button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className={`bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40 ${
-                  isSubmitting ? "opacity-70 cursor-not-allowed" : ""
-                }`}
+                onClick={handlePreview}
+                className="flex-1 bg-[#0066FF] text-white py-2.5 rounded-lg hover:bg-[#0052CC]"
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
-                    Creating Fundraiser...
-                  </>
-                ) : (
-                  <>
-                    <Heart className="h-4 w-4 fill-current" />
-                    Launch Fundraiser
-                  </>
-                )}
+                Preview
               </button>
               <button
-                onClick={handleBack}
-                disabled={isSubmitting}
-                className={`border border-blue-500/50 text-white px-5 py-2.5 rounded-lg hover:bg-blue-600/30 flex items-center justify-center gap-2 transition-all ${
-                  isSubmitting ? "opacity-70 cursor-not-allowed" : ""
-                }`}
+                onClick={handlePublish}
+                className="flex-1 bg-gray-600 text-white py-2.5 rounded-lg hover:bg-gray-500"
+                disabled={!formData.walletAddress}
               >
-                <ArrowLeft className="h-4 w-4" />
-                Go Back
+                Publish
+              </button>
+              <button
+                onClick={() => router.push("/")}
+                className="flex-1 bg-[#0066FF] text-white py-2.5 rounded-lg hover:bg-[#0052CC]"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -412,43 +439,57 @@ export default function CreateFundraiserPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto">
-          <div className="flex justify-center mb-6">
-            <div className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-lg shadow-blue-600/30">
-              CREATE FUNDRAISER
+    <div className="min-h-screen bg-[#0A0A0A] text-white">
+      <div className="max-w-[1200px] mx-auto px-6">
+        <div className="grid grid-cols-12 gap-8 min-h-screen">
+          {/* Left Section */}
+          <div className="col-span-5 bg-[#111827] relative">
+            <div className="p-8">
+              <Link href="/" className="inline-flex items-center text-2xl font-bold mb-12">
+                <span>FUND</span>
+                <span className="text-[#0066FF]">CHAIN</span>
+              </Link>
+              
+              <div className="relative">
+                <h1 className="text-3xl font-bold mb-4">
+                  Start your <span className="text-[#0066FF]">FUNDRAISE</span> now
+                </h1>
+                <div className="mt-8">
+                  <Image
+                    src="/hands.png"
+                    alt="Fundraising"
+                    width={400}
+                    height={400}
+                    className="opacity-50"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="overflow-hidden bg-transparent">
-            <div className="relative">
-              {/* Background with heart pattern */}
-              <div className="absolute inset-0 z-0 opacity-10">
-                <div className="h-full w-full flex items-center justify-center">
-                  <Heart className="h-64 w-64 text-blue-500" />
-                </div>
-              </div>
+          {/* Right Section - Form */}
+          <div className="col-span-7 py-8">
+            <div className="max-w-2xl">
+              <button
+                onClick={handleBack}
+                className="inline-flex items-center text-gray-400 hover:text-white mb-6"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                <span>Your FUNDRAISE</span>
+              </button>
 
-              {/* Content */}
-              <div className="relative z-10 p-8 bg-gradient-to-b from-gray-900/90 to-black/90 rounded-xl border border-gray-800 shadow-xl">
-                {renderStep()}
+              {renderStep()}
 
-                <div className="flex justify-center mt-8">
-                  <div className="flex space-x-3">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div
-                        key={i}
-                        className={`h-2 w-${
-                          step === i ? "8" : "2"
-                        } rounded-full transition-all duration-300 ${
-                          step === i ? "bg-blue-500" : "bg-gray-700"
-                        }`}
-                      />
-                    ))}
-                  </div>
+              {step < 4 && (
+                <div className="mt-8">
+                  <button
+                    onClick={handleNext}
+                    className="w-full bg-[#0066FF] text-white py-2.5 rounded-lg hover:bg-[#0052CC]"
+                  >
+                    Next →
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

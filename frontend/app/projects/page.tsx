@@ -17,6 +17,12 @@ import {
   HelpCircle,
   Plus,
   MoreHorizontal,
+  BookOpen,
+  Lightbulb,
+  Target,
+  Coins,
+  Shield,
+  ArrowRight,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,7 +45,83 @@ type Fundraiser = {
   comments: number;
   shares: number;
   createdAt?: string;
+  endDate?: string;
+  blockchain?: {
+    network: string;
+    contractAddress: string;
+  };
 };
+
+// Define categories
+const CATEGORIES = [
+  { id: "all", name: "All Categories" },
+  { id: "community", name: "Community" },
+  { id: "medical", name: "Medical" },
+  { id: "education", name: "Education" },
+  { id: "environment", name: "Environment" },
+  { id: "technology", name: "Technology" },
+  { id: "arts", name: "Arts" },
+];
+
+// Educational content data
+const EDUCATIONAL_POSTS = [
+  {
+    id: "p1",
+    title: "Coding Bootcamp Scholarship Fund",
+    description: "Help aspiring developers access quality education",
+    organizer: {
+      name: "Sarah Chen",
+      avatar: "https://ui-avatars.com/api/?name=Sarah+Chen&background=0066FF&color=fff"
+    },
+    goal: 15000,
+    raised: 8750,
+    daysLeft: 15,
+    supporters: 124,
+    category: "Education"
+  },
+  {
+    id: "p2",
+    title: "STEM Education for Rural Schools",
+    description: "Bringing technology and science resources to underserved areas",
+    organizer: {
+      name: "Michael Torres",
+      avatar: "https://ui-avatars.com/api/?name=Michael+Torres&background=00CC88&color=fff"
+    },
+    goal: 25000,
+    raised: 12300,
+    daysLeft: 22,
+    supporters: 198,
+    category: "Education"
+  },
+  {
+    id: "p3",
+    title: "Digital Library Initiative",
+    description: "Creating accessible online learning resources",
+    organizer: {
+      name: "Emma Watson",
+      avatar: "https://ui-avatars.com/api/?name=Emma+Watson&background=FF6B6B&color=fff"
+    },
+    goal: 10000,
+    raised: 7200,
+    daysLeft: 18,
+    supporters: 156,
+    category: "Education"
+  },
+  {
+    id: "p4",
+    title: "Student Mental Health Support",
+    description: "Providing counseling and wellness resources for students",
+    organizer: {
+      name: "David Park",
+      avatar: "https://ui-avatars.com/api/?name=David+Park&background=845EC2&color=fff"
+    },
+    goal: 20000,
+    raised: 15600,
+    daysLeft: 12,
+    supporters: 234,
+    category: "Education"
+  }
+];
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -49,6 +131,7 @@ export default function ProjectsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
   const observer = useRef<IntersectionObserver | null>(null);
+  const [activeTab, setActiveTab] = useState("education");
 
   // Generate mock fundraiser data
   const generateMockFundraisers = (pageNum: number) => {
@@ -57,8 +140,9 @@ export default function ProjectsPage() {
 
     for (let i = 0; i < 5; i++) {
       const id = `f${startIndex + i + 1}`;
-      const raised = Math.floor(Math.random() * 10000);
-      const goal = raised + Math.floor(Math.random() * 15000) + 5000;
+      // Use deterministic values instead of random
+      const raised = 5000 + ((startIndex + i) * 1000);
+      const goal = raised + 10000;
 
       const categories = [
         "Community",
@@ -81,35 +165,36 @@ export default function ProjectsPage() {
         "Mental Health Support Network",
       ];
 
-      // Generate a random date within the last 30 days
+      // Use deterministic date based on index
       const date = new Date();
-      date.setDate(date.getDate() - Math.floor(Math.random() * 30));
+      date.setHours(0, 0, 0, 0); // Reset time portion
+      date.setDate(date.getDate() - (startIndex + i));
 
       newFundraisers.push({
         id,
-        title: titles[Math.floor(Math.random() * titles.length)],
+        title: titles[(startIndex + i) % titles.length],
         organizer: `Organizer ${startIndex + i + 1}`,
-        organizerAvatar: `/placeholder.svg?height=40&width=40&text=${
-          startIndex + i + 1
-        }`,
-        description:
-          "This fundraiser aims to make a positive impact in our community through innovative solutions and collaborative efforts.",
-        category: categories[Math.floor(Math.random() * categories.length)],
+        organizerAvatar: `/placeholder.svg?height=40&width=40&text=${startIndex + i + 1}`,
+        description: "This fundraiser aims to make a positive impact in our community through innovative solutions and collaborative efforts.",
+        category: categories[(startIndex + i) % categories.length],
         goal,
         raised,
-        daysLeft: Math.floor(Math.random() * 30) + 1,
-        coverImage: `/placeholder.svg?height=300&width=600&text=Project ${
-          startIndex + i + 1
-        }`,
+        daysLeft: 30 - ((startIndex + i) % 30), // Deterministic days left
+        coverImage: `/placeholder.svg?height=300&width=600&text=Project ${startIndex + i + 1}`,
         isLiked: false,
-        likes: Math.floor(Math.random() * 200),
-        comments: Math.floor(Math.random() * 50),
-        shares: Math.floor(Math.random() * 30),
+        likes: 100 + ((startIndex + i) * 10), // Deterministic likes
+        comments: 20 + ((startIndex + i) * 2), // Deterministic comments
+        shares: 10 + ((startIndex + i) * 1), // Deterministic shares
         createdAt: date.toLocaleDateString("en-US", {
           year: "numeric",
           month: "short",
           day: "numeric",
         }),
+        endDate: new Date(date.getTime() + (30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+        blockchain: {
+          network: "Ethereum",
+          contractAddress: `0x${id}...`
+        }
       });
     }
 
@@ -118,6 +203,8 @@ export default function ProjectsPage() {
 
   // Load initial data
   useEffect(() => {
+    // Move the data loading to client-side only
+    if (typeof window !== 'undefined') {
     // Check if there are any saved fundraisers in localStorage
     const savedFundraisers = JSON.parse(
       localStorage.getItem("fundraisers") || "[]"
@@ -127,9 +214,11 @@ export default function ProjectsPage() {
     const processedSavedFundraisers = savedFundraisers.map(
       (fundraiser: Fundraiser) => {
         if (!fundraiser.createdAt) {
+            const date = new Date();
+            date.setHours(0, 0, 0, 0);
           return {
             ...fundraiser,
-            createdAt: new Date().toLocaleDateString("en-US", {
+              createdAt: date.toLocaleDateString("en-US", {
               year: "numeric",
               month: "short",
               day: "numeric",
@@ -147,6 +236,7 @@ export default function ProjectsPage() {
     ];
 
     setFundraisers(initialFundraisers);
+    }
   }, []);
 
   // Handle like fundraiser
@@ -164,6 +254,36 @@ export default function ProjectsPage() {
           : fundraiser
       )
     );
+  };
+
+  // Handle donate click
+  const handleDonateClick = (projectId: string) => {
+    // Save current project data to localStorage before redirecting
+    const projectsData = JSON.parse(localStorage.getItem("projectsData") || "{}");
+    const project = EDUCATIONAL_POSTS.find(p => p.id === projectId);
+    
+    if (project && !projectsData[projectId]) {
+      projectsData[projectId] = {
+        id: project.id,
+        title: project.title,
+        description: project.description,
+        goal: project.goal,
+        raised: project.raised,
+        category: project.category,
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        acceptedTokens: ["USD", "ETH", "BTC", "DAI"],
+        minimumDonation: 1,
+        organizer: project.organizer.name,
+        supporters: project.supporters,
+        daysLeft: project.daysLeft,
+        blockchain: {
+          network: "Ethereum",
+          contractAddress: `0x${project.id}...`
+        }
+      };
+      localStorage.setItem("projectsData", JSON.stringify(projectsData));
+    }
+    router.push(`/donate/${projectId}`);
   };
 
   // Load more fundraisers
@@ -219,497 +339,139 @@ export default function ProjectsPage() {
     .slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
-      <div className="container mx-auto px-4 py-4 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <div className="min-h-screen bg-[#0A0A0A]">
+      <div className="max-w-[1200px] mx-auto px-6">
+        <div className="grid grid-cols-12 gap-8">
           {/* Left Sidebar */}
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="bg-white rounded-lg shadow p-4 sticky top-24">
-              <div className="space-y-1">
-                <Link
-                  href="/projects"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 text-blue-600 font-medium"
-                >
-                  <Home className="h-5 w-5" />
-                  <span>Home</span>
-                </Link>
-                <Link
-                  href="/search"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700"
-                >
-                  <Search className="h-5 w-5" />
-                  <span>Search Projects</span>
-                </Link>
-                <Link
-                  href="/my-donations"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700"
-                >
-                  <Bookmark className="h-5 w-5" />
-                  <span>My Donations</span>
-                </Link>
-                <Link
-                  href="/communities"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700"
-                >
-                  <Users className="h-5 w-5" />
-                  <span>Communities</span>
-                </Link>
-              </div>
-
-              <div className="border-t border-gray-200 my-4"></div>
-
-              <h3 className="font-medium text-gray-500 px-3 mb-2">
-                Categories
-              </h3>
-              <div className="space-y-1">
-                {[
-                  "Community",
-                  "Medical",
-                  "Education",
-                  "Environment",
-                  "Technology",
-                  "Arts",
-                ].map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setActiveCategory(category.toLowerCase())}
-                    className={`flex items-center gap-3 p-3 rounded-lg w-full text-left ${
-                      activeCategory === category.toLowerCase()
-                        ? "bg-blue-50 text-blue-600"
-                        : "hover:bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    <span>{category}</span>
-                  </button>
-                ))}
-                <button
-                  onClick={() => setActiveCategory("all")}
-                  className={`flex items-center gap-3 p-3 rounded-lg w-full text-left ${
-                    activeCategory === "all"
-                      ? "bg-blue-50 text-blue-600"
-                      : "hover:bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  <span>All Categories</span>
+          <aside className="col-span-2 fixed">
+            <div className="pt-8">
+              <h2 className="text-white text-base mb-4">Categories</h2>
+              <nav className="flex flex-col gap-1">
+                <button className="text-left px-4 py-2.5 rounded-lg bg-[#0066FF] text-white">
+                  Education
                 </button>
-              </div>
-
-              <div className="border-t border-gray-200 my-4"></div>
-
-              <div className="space-y-1">
-                <Link
-                  href="/settings"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700"
-                >
-                  <Settings className="h-5 w-5" />
-                  <span>Settings</span>
-                </Link>
-                <Link
-                  href="/help"
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700"
-                >
-                  <HelpCircle className="h-5 w-5" />
-                  <span>Help & Support</span>
-                </Link>
-              </div>
+                <button className="text-left px-4 py-2.5 rounded-lg text-gray-400 hover:bg-[#1B2333] transition-colors">
+                  Technology
+                </button>
+                <button className="text-left px-4 py-2.5 rounded-lg text-gray-400 hover:bg-[#1B2333] transition-colors">
+                  Medical
+                </button>
+                <button className="text-left px-4 py-2.5 rounded-lg text-gray-400 hover:bg-[#1B2333] transition-colors">
+                  Environment
+                </button>
+                <button className="text-left px-4 py-2.5 rounded-lg text-gray-400 hover:bg-[#1B2333] transition-colors">
+                  Community
+                </button>
+              </nav>
             </div>
-          </div>
+          </aside>
 
           {/* Main Content */}
-          <div className="lg:col-span-6">
-            {/* Create Fundraiser Card */}
-            <div className="bg-white rounded-lg shadow mb-4 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full overflow-hidden relative">
-                  <Image
-                    src="/placeholder.svg?height=40&width=40"
-                    alt="Your profile"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <button
-                  onClick={() => router.push("/fundraiser/create")}
-                  className="bg-gray-100 hover:bg-gray-200 rounded-full py-2 px-4 text-gray-600 flex-1 text-left"
-                >
-                  Start a new fundraiser...
-                </button>
-              </div>
-              <div className="flex mt-3 pt-3 border-t border-gray-100">
-                <button
-                  onClick={() => router.push("/fundraiser/create")}
-                  className="flex items-center justify-center gap-2 flex-1 py-2 hover:bg-gray-100 rounded-lg text-gray-600"
-                >
-                  <Plus className="h-5 w-5 text-blue-500" />
-                  <span>Create Fundraiser</span>
-                </button>
-              </div>
-            </div>
+          <main className="col-span-8 col-start-3">
+            <div className="py-8">
+              <h1 className="text-2xl font-semibold text-white mb-2">Education Projects</h1>
+              <p className="text-gray-400">
+                Support educational initiatives and help create opportunities for learning
+              </p>
 
-            {/* Filters */}
-            <div className="bg-white rounded-lg shadow mb-4 p-2">
-              <div className="flex overflow-x-auto hide-scrollbar">
-                <button
-                  onClick={() => setActiveCategory("all")}
-                  className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-                    activeCategory === "all"
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  All Projects
-                </button>
-                <button
-                  onClick={() => setActiveCategory("trending")}
-                  className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-                    activeCategory === "trending"
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  Trending
-                </button>
-                {[
-                  "Community",
-                  "Medical",
-                  "Education",
-                  "Environment",
-                  "Technology",
-                  "Arts",
-                ].map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setActiveCategory(category.toLowerCase())}
-                    className={`px-4 py-2 rounded-lg whitespace-nowrap ${
-                      activeCategory === category.toLowerCase()
-                        ? "bg-blue-50 text-blue-600"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
+              <div className="space-y-4 mt-8">
+                {EDUCATIONAL_POSTS.map((post) => (
+                  <div 
+                    key={post.id} 
+                    className="bg-[#111827] rounded-xl overflow-hidden hover:bg-[#1B2333] transition-colors"
                   >
-                    {category}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Fundraiser Posts */}
-            <div className="space-y-4">
-              {filteredFundraisers.map((fundraiser, index) => {
-                const isLastItem = index === filteredFundraisers.length - 1;
-
-                // Calculate progress percentage
-                const progressPercentage = Math.min(
-                  Math.round((fundraiser.raised / fundraiser.goal) * 100),
-                  100
-                );
-
-                return (
-                  <div
-                    key={fundraiser.id}
-                    ref={isLastItem ? lastFundraiserRef : null}
-                    className="bg-white rounded-lg shadow overflow-hidden"
-                  >
-                    {/* Post Header */}
-                    <div className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full overflow-hidden relative">
-                            <Image
-                              src={
-                                fundraiser.organizerAvatar || "/placeholder.svg"
-                              }
-                              alt={fundraiser.organizer}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                          <div>
-                            <p className="font-medium">
-                              {fundraiser.organizer}
-                            </p>
-                            <div className="flex items-center text-xs text-gray-500">
-                              <span>{fundraiser.createdAt}</span>
-                              <span className="mx-1">•</span>
-                              <span className="flex items-center">
-                                <span className="inline-block h-2 w-2 rounded-full bg-blue-500 mr-1"></span>
-                                {fundraiser.category}
-                              </span>
-                            </div>
+                    <div className="p-6">
+                      <div className="flex items-start space-x-4 mb-6">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-[#0066FF] flex items-center justify-center text-lg font-semibold text-white">
+                            {post.organizer.name.charAt(0)}
                           </div>
                         </div>
-                        <button className="text-gray-500 hover:bg-gray-100 p-2 rounded-full">
-                          <MoreHorizontal className="h-5 w-5" />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-medium text-white mb-1">{post.title}</h3>
+                          <p className="text-sm text-gray-400 mb-3">by {post.organizer.name}</p>
+                          <p className="text-gray-300">{post.description}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-[#0A0A0A] rounded-lg p-4 mb-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-400">Raised</span>
+                          <div className="text-right">
+                            <span className="text-white font-medium">
+                              ${post.raised.toLocaleString()}
+                            </span>
+                            <span className="text-gray-400">
+                              {" "}of ${post.goal.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-800 rounded-full h-1.5 mb-2">
+                          <div
+                            className="bg-[#0066FF] h-1.5 rounded-full transition-all duration-500"
+                            style={{ width: `${(post.raised / post.goal) * 100}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-400">{post.supporters} supporters</span>
+                          <span className="text-gray-400">{post.daysLeft} days left</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => handleDonateClick(post.id)}
+                          className="flex-1 bg-[#0066FF] text-white py-2.5 px-4 rounded-lg hover:bg-[#0052CC] transition-colors text-sm font-medium"
+                        >
+                          Donate Now
+                        </button>
+                        <button className="p-2 text-gray-400 hover:text-white transition-colors">
+                          <Heart className="h-5 w-5" />
+                        </button>
+                        <button className="p-2 text-gray-400 hover:text-white transition-colors">
+                          <Share2 className="h-5 w-5" />
                         </button>
                       </div>
-
-                      <Link href={`/fundraiser/${fundraiser.id}`}>
-                        <h2 className="text-lg font-bold mt-2 hover:text-blue-600 transition-colors">
-                          {fundraiser.title}
-                        </h2>
-                      </Link>
-
-                      <p className="text-gray-600 mt-1 mb-3">
-                        {fundraiser.description}
-                      </p>
-                    </div>
-
-                    {/* Post Image */}
-                    <Link href={`/fundraiser/${fundraiser.id}`}>
-                      <div className="relative h-64 w-full">
-                        <Image
-                          src={fundraiser.coverImage || "/placeholder.svg"}
-                          alt={fundraiser.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    </Link>
-
-                    {/* Progress Bar */}
-                    <div className="px-4 py-3">
-                      <div className="flex justify-between text-sm mb-1">
-                        <p className="font-bold">
-                          ${fundraiser.raised.toLocaleString()}
-                        </p>
-                        <p className="text-gray-500">
-                          raised of ${fundraiser.goal.toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 rounded-full"
-                          style={{ width: `${progressPercentage}%` }}
-                        ></div>
-                      </div>
-                      <div className="flex justify-between mt-1">
-                        <p className="text-xs text-gray-500">
-                          {progressPercentage}% Complete
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {fundraiser.daysLeft} days left
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Post Stats */}
-                    <div className="px-4 py-1 border-t border-gray-100 text-xs text-gray-500">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="flex items-center gap-1">
-                            <Heart className="h-3 w-3 text-red-500 fill-red-500" />
-                            {fundraiser.likes}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span>{fundraiser.comments} comments</span>
-                          <span>•</span>
-                          <span>{fundraiser.shares} shares</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Post Actions */}
-                    <div className="px-2 py-1 border-t border-gray-100 flex">
-                      <button
-                        onClick={() => handleLikeFundraiser(fundraiser.id)}
-                        className={`flex items-center justify-center gap-1 flex-1 py-2 rounded-md ${
-                          fundraiser.isLiked
-                            ? "text-blue-600"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        <Heart
-                          className={`h-5 w-5 ${
-                            fundraiser.isLiked
-                              ? "fill-blue-600 text-blue-600"
-                              : ""
-                          }`}
-                        />
-                        <span>Like</span>
-                      </button>
-
-                      <Link
-                        href={`/fundraiser/${fundraiser.id}`}
-                        className="flex items-center justify-center gap-1 flex-1 py-2 text-gray-600 hover:bg-gray-100 rounded-md"
-                      >
-                        <MessageCircle className="h-5 w-5" />
-                        <span>Comment</span>
-                      </Link>
-
-                      <button className="flex items-center justify-center gap-1 flex-1 py-2 text-gray-600 hover:bg-gray-100 rounded-md">
-                        <Share2 className="h-5 w-5" />
-                        <span>Share</span>
-                      </button>
-
-                      <Link
-                        href={`/fundraiser/${fundraiser.id}`}
-                        className="flex items-center justify-center gap-1 flex-1 py-2 text-gray-600 hover:bg-gray-100 rounded-md"
-                      >
-                        <ArrowUpRight className="h-5 w-5" />
-                        <span>View</span>
-                      </Link>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
 
-            {/* Loading Indicator */}
-            {loading && (
-              <div className="flex justify-center my-6">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse delay-150"></div>
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse delay-300"></div>
-                </div>
-              </div>
-            )}
-
-            {/* End of Results */}
-            {!hasMore && !loading && (
-              <div className="text-center my-6 text-gray-500 bg-white rounded-lg shadow p-4">
-                {"You've reached the end of the projects list."}
-              </div>
-            )}
-          </div>
-
-          {/* Right Sidebar */}
-          <div className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-24 space-y-4">
-              {/* Trending Projects */}
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">Trending Projects</h3>
-                  <TrendingUp className="h-4 w-4 text-blue-500" />
-                </div>
-
-                <div className="space-y-3">
-                  {trendingFundraisers.map((fundraiser) => (
-                    <Link
-                      key={fundraiser.id}
-                      href={`/fundraiser/${fundraiser.id}`}
-                      className="flex items-start gap-3 group"
-                    >
-                      <div className="h-12 w-12 rounded-lg overflow-hidden relative flex-shrink-0">
-                        <Image
-                          src={fundraiser.coverImage || "/placeholder.svg"}
-                          alt={fundraiser.title}
-                          fill
-                          className="object-cover"
-                        />
+                {/* Loading Placeholder */}
+                <div className="bg-[#111827] rounded-xl overflow-hidden animate-pulse">
+                  <div className="p-6">
+                    <div className="flex items-start space-x-4 mb-6">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-gray-700"></div>
                       </div>
-                      <div>
-                        <h4 className="font-medium text-sm group-hover:text-blue-600 line-clamp-2">
-                          {fundraiser.title}
-                        </h4>
-                        <p className="text-xs text-gray-500 mt-1">
-                          ${fundraiser.raised.toLocaleString()} raised
-                        </p>
+                      <div className="flex-1">
+                        <div className="h-6 bg-gray-700 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gray-700 rounded w-1/4 mb-4"></div>
+                        <div className="h-4 bg-gray-700 rounded w-full"></div>
                       </div>
-                    </Link>
-                  ))}
-                </div>
-
-                <Link
-                  href="/trending"
-                  className="block text-blue-600 text-sm text-center mt-4 hover:underline"
-                >
-                  See More Trending Projects
-                </Link>
-              </div>
-
-              {/* Upcoming Events */}
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">Upcoming Events</h3>
-                  <Calendar className="h-4 w-4 text-blue-500" />
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-blue-100 text-blue-600 rounded-lg p-2 text-center flex-shrink-0 w-12">
-                      <div className="text-xs">APR</div>
-                      <div className="font-bold">15</div>
                     </div>
-                    <div>
-                      <h4 className="font-medium text-sm">
-                        Fundraising Workshop
-                      </h4>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Learn how to create successful campaigns
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-start gap-3">
-                    <div className="bg-blue-100 text-blue-600 rounded-lg p-2 text-center flex-shrink-0 w-12">
-                      <div className="text-xs">APR</div>
-                      <div className="font-bold">22</div>
+                    <div className="bg-[#0A0A0A] rounded-lg p-4 mb-6">
+                      <div className="flex justify-between mb-2">
+                        <div className="h-4 bg-gray-700 rounded w-20"></div>
+                        <div className="h-4 bg-gray-700 rounded w-32"></div>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-1.5 mb-2"></div>
+                      <div className="flex justify-between">
+                        <div className="h-4 bg-gray-700 rounded w-24"></div>
+                        <div className="h-4 bg-gray-700 rounded w-24"></div>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-medium text-sm">Community Meetup</h4>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Connect with other fundraisers
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-start gap-3">
-                    <div className="bg-blue-100 text-blue-600 rounded-lg p-2 text-center flex-shrink-0 w-12">
-                      <div className="text-xs">MAY</div>
-                      <div className="font-bold">05</div>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-sm">Charity Gala</h4>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Annual fundraising event
-                      </p>
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-1 h-10 bg-gray-700 rounded-lg"></div>
+                      <div className="h-9 w-9 bg-gray-700 rounded-lg"></div>
+                      <div className="h-9 w-9 bg-gray-700 rounded-lg"></div>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Create Fundraiser CTA */}
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow p-4 text-white">
-                <h3 className="font-medium mb-2">Start Your Own Fundraiser</h3>
-                <p className="text-sm text-blue-100 mb-4">
-                  Create a campaign and start raising funds for your cause
-                  today.
-                </p>
-                <button
-                  onClick={() => router.push("/fundraiser/create")}
-                  className="bg-white text-blue-600 font-medium py-2 px-4 rounded-lg w-full hover:bg-blue-50 transition-colors"
-                >
-                  Create Fundraiser
-                </button>
-              </div>
-
-              {/* Footer Links */}
-              <div className="text-xs text-gray-500 p-4">
-                <div className="flex flex-wrap gap-2">
-                  <Link href="/about" className="hover:underline">
-                    About
-                  </Link>
-                  <Link href="/privacy" className="hover:underline">
-                    Privacy
-                  </Link>
-                  <Link href="/terms" className="hover:underline">
-                    Terms
-                  </Link>
-                  <Link href="/cookies" className="hover:underline">
-                    Cookies
-                  </Link>
-                  <Link href="/careers" className="hover:underline">
-                    Careers
-                  </Link>
-                  <Link href="/help" className="hover:underline">
-                    Help Center
-                  </Link>
-                </div>
-                <p className="mt-2">© 2025 FundChain. All rights reserved.</p>
               </div>
             </div>
-          </div>
+          </main>
         </div>
       </div>
     </div>

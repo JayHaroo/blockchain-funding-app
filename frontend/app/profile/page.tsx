@@ -5,7 +5,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Pencil, MapPin, LinkIcon } from "lucide-react";
+import { Pencil, MapPin, LinkIcon, Camera } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Update the component to include profile picture upload functionality
 export default function ProfilePage() {
@@ -34,6 +35,9 @@ export default function ProfilePage() {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -87,48 +91,30 @@ export default function ProfilePage() {
     // For example: updateUserProfile({ name: tempName, location: tempLocation, website: tempWebsite });
   };
 
-  const handleProfilePictureClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
   };
 
-  const handleCoverImageClick = () => {
-    if (coverInputRef.current) {
-      coverInputRef.current.click();
-    }
-  };
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleProfilePictureChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const file = files[0];
+    try {
+      // Convert to base64
       const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target && typeof event.target.result === "string") {
-          const newProfilePic = event.target.result;
-          setProfilePicture(newProfilePic);
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setPreviewImage(base64String);
+        
+        // Update user avatar in auth context
+        updateUser({ avatar: base64String });
 
-          // Update the user avatar in the auth context immediately
-          // This will update the navbar profile picture in real-time
-          updateUser({ avatar: newProfilePic });
-        }
+        // Store in localStorage for persistence
+        localStorage.setItem('userAvatar', base64String);
       };
       reader.readAsDataURL(file);
-    }
-  };
-
-  const handleCoverImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target && typeof event.target.result === "string") {
-          setCoverImage(event.target.result);
-        }
-      };
-      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Error processing image:", error);
     }
   };
 
@@ -249,7 +235,7 @@ export default function ProfilePage() {
               >
                 {editingProfile && (
                   <button
-                    onClick={handleCoverImageClick}
+                    onClick={handleImageClick}
                     className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <span className="text-white bg-gray-800 px-3 py-1 rounded-lg">
@@ -260,7 +246,19 @@ export default function ProfilePage() {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={handleCoverImageChange}
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          const file = files[0];
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            if (event.target && typeof event.target.result === "string") {
+                              setCoverImage(event.target.result);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
                     />
                   </button>
                 )}
@@ -268,30 +266,28 @@ export default function ProfilePage() {
               <div className="p-6 relative">
                 <div
                   className="absolute -top-12 left-6 border-4 border-gray-900 rounded-full overflow-hidden group cursor-pointer"
-                  onClick={
-                    editingProfile ? handleProfilePictureClick : undefined
-                  }
+                  onClick={handleImageClick}
                 >
                   <Image
-                    src={profilePicture || "/placeholder.svg"}
+                    src={previewImage || profilePicture || "/placeholder.svg"}
                     alt={name}
                     width={80}
                     height={80}
                     className="bg-gray-800"
                   />
-                  {editingProfile && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Pencil className="h-5 w-5 text-white" />
-                    </div>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleProfilePictureChange}
-                  />
+                  <div
+                    className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <Camera className="h-5 w-5 text-white" />
+                  </div>
                 </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
 
                 <div className="mt-10 flex justify-between items-start">
                   <div>

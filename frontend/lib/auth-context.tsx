@@ -45,20 +45,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
+    const storedAvatar = localStorage.getItem("userAvatar");
+    
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      const fallbackAvatar = "/avatar.jpg";
-      const avatar = isValidImagePath(fallbackAvatar)
-        ? fallbackAvatar
-        : undefined;
-
-      setUser({
-        id: "default_user",
-        name: "John Doe",
-        email: "john.doe@example.com",
-        avatar,
-      });
+      const parsedUser = JSON.parse(storedUser);
+      // If there's a stored avatar, use it
+      if (storedAvatar) {
+        parsedUser.avatar = storedAvatar;
+      }
+      setUser(parsedUser);
     }
     setIsLoading(false);
   }, []);
@@ -77,15 +72,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (!foundUser) throw new Error("Invalid email or password");
 
-      // Fix: Use rest operator without naming the excluded property
       const { password: _, ...userWithoutPassword } = foundUser;
 
-      // Optional: check if avatar is valid
-      if (
-        userWithoutPassword.avatar &&
-        !isValidImagePath(userWithoutPassword.avatar)
-      ) {
-        userWithoutPassword.avatar = undefined;
+      // Get stored avatar if exists
+      const storedAvatar = localStorage.getItem("userAvatar");
+      if (storedAvatar) {
+        userWithoutPassword.avatar = storedAvatar;
       }
 
       localStorage.setItem("user", JSON.stringify(userWithoutPassword));
@@ -114,18 +106,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const userExists = users.some((u) => u.email === email);
       if (userExists) throw new Error("User already exists");
 
-      const avatar = "/avatar.jpg";
       const newUser = {
         id: `user_${Date.now()}`,
         email,
         password,
         name,
-        avatar: isValidImagePath(avatar) ? avatar : undefined,
+        avatar: undefined
       };
 
       localStorage.setItem("users", JSON.stringify([...users, newUser]));
 
-      // Fix: Use rest operator without naming the excluded property
       const { password: _, ...userWithoutPassword } = newUser;
 
       localStorage.setItem("user", JSON.stringify(userWithoutPassword));
@@ -141,26 +131,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signOut = () => {
     localStorage.removeItem("user");
+    // Don't remove avatar on signout to persist it
     setUser(null);
   };
 
   const updateUser = (updates: Partial<User>) => {
     if (user) {
-      let avatar = updates.avatar;
-      if (avatar && !isValidImagePath(avatar)) {
-        avatar = undefined;
-      }
+      const updatedUser = { ...user, ...updates };
 
-      const updatedUser = { ...user, ...updates, avatar };
+      // If updating avatar, store it separately
+      if (updates.avatar) {
+        localStorage.setItem("userAvatar", updates.avatar);
+      }
 
       setUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
+      // Update in users list
       const users = JSON.parse(
         localStorage.getItem("users") || "[]"
       ) as UserWithPassword[];
       const updatedUsers = users.map((u) =>
-        u.id === user.id ? { ...u, ...updates, avatar } : u
+        u.id === user.id ? { ...u, ...updates } : u
       );
       localStorage.setItem("users", JSON.stringify(updatedUsers));
     }

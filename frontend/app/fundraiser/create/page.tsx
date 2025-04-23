@@ -2,12 +2,12 @@
 
 import React from "react";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
-import { ArrowRight, ArrowLeft, Upload, Heart } from "lucide-react";
+import { ArrowRight, ArrowLeft, Upload, Heart, X } from "lucide-react";
 
 // Rich text editor icons and components
 const EditorIcons = {
@@ -30,7 +30,7 @@ interface FundraiserFormData {
   category: string;
   otherCategory?: string;
   location: string;
-  displayImage?: string | null;
+  displayImage: string | null;
   supportingImages: File[];
   walletAddress: string;
   goal: number;
@@ -38,6 +38,15 @@ interface FundraiserFormData {
   acceptedTokens: string[];
   minimumDonation: number;
   blockchain: string;
+}
+
+interface PreviewFundraiser extends FundraiserFormData {
+  id: string;
+  status: string;
+  createdAt: string;
+  raised: number;
+  supporters: number;
+  previewImages: string[];
 }
 
 const CATEGORIES = [
@@ -61,25 +70,87 @@ export default function CreateFundraiser() {
     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     acceptedTokens: ["USD", "ETH", "BTC", "DAI"],
     minimumDonation: 1,
-    blockchain: "Ethereum"
+    blockchain: "Ethereum",
+    displayImage: null
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateStep = (currentStep: number): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    switch (currentStep) {
+      case 1:
+        if (!formData.name.trim()) {
+          newErrors.name = "Fundraiser name is required";
+        }
+        break;
+      case 2:
+        break;
+      case 3:
+        break;
+      case 4:
+        if (!formData.walletAddress) {
+          newErrors.walletAddress = "Wallet address is required";
+        }
+        if (formData.goal <= 0) {
+          newErrors.goal = "Goal amount must be greater than 0";
+        }
+        break;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
       setFormData((prev) => ({ ...prev, [name]: value }));
+      // Clear error when user starts typing
+      if (errors[name]) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
     },
-    []
+    [errors]
   );
 
+  const handleSocialLinkChange = useCallback((index: number, value: string) => {
+    setFormData(prev => {
+      const newSocialLinks = [...prev.socialLinks];
+      newSocialLinks[index] = value;
+      return { ...prev, socialLinks: newSocialLinks };
+    });
+    // Clear error when user starts typing
+    if (errors.socialLinks) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.socialLinks;
+        return newErrors;
+      });
+    }
+  }, [errors]);
+
   const handleCategorySelect = useCallback((category: string) => {
-    setFormData((prev) => ({ ...prev, category }));
-  }, []);
+    setFormData(prev => ({ ...prev, category }));
+    if (errors.category) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.category;
+        return newErrors;
+      });
+    }
+  }, [errors]);
 
   const handleNext = useCallback(() => {
     if (step < 4) {
-      setStep(step + 1);
+      setStep(prev => prev + 1);
     }
   }, [step]);
 
@@ -90,138 +161,373 @@ export default function CreateFundraiser() {
   }, [step]);
 
   const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
         const file = e.target.files[0];
-        setFormData((prev) => ({
-          ...prev,
-          displayImage: URL.createObjectURL(file),
-        }));
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          setErrors((prev) => ({
+            ...prev,
+            displayImage: "Please upload an image file"
+          }));
+          return;
+        }
+
+        // Validate file size (4MB limit)
+        if (file.size > 4 * 1024 * 1024) {
+          setErrors((prev) => ({
+            ...prev,
+            displayImage: "File size must be less than 4MB"
+          }));
+          return;
+        }
+
+        try {
+          // Create a preview URL
+          const objectUrl = URL.createObjectURL(file);
+          
+          setFormData((prev) => ({
+            ...prev,
+            displayImage: objectUrl
+          }));
+
+          // Clear error if exists
+          if (errors.displayImage) {
+            setErrors((prev) => {
+              const newErrors = { ...prev };
+              delete newErrors.displayImage;
+              return newErrors;
+            });
+          }
+        } catch (error) {
+          console.error('Error processing image:', error);
+          setErrors((prev) => ({
+            ...prev,
+            displayImage: "Error processing image. Please try again."
+          }));
+        }
       }
     },
-    []
+    [errors]
   );
 
-  const handleSubmit = useCallback(() => {
-    setIsSubmitting(true);
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
 
-    // Simulate saving to database
-    setTimeout(() => {
-      // Create a new fundraiser object with complete data
-      const fundraiserData = {
-        id: `f${Date.now()}`,
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const validImageFiles: File[] = [];
+
+    for (const file of files) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        continue;
+      }
+
+      // Validate file size
+      if (file.size > 4 * 1024 * 1024) {
+        setErrors((prev) => ({
+          ...prev,
+          supportingImages: "File size must be less than 4MB"
+        }));
+        continue;
+      }
+
+      validImageFiles.push(file);
+    }
+    
+    if (validImageFiles.length > 0) {
+      setUploadedImages(prev => [...prev, ...validImageFiles]);
+      setFormData(prev => ({
+        ...prev,
+        supportingImages: [...prev.supportingImages, ...validImageFiles]
+      }));
+      
+      if (errors.supportingImages) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.supportingImages;
+          return newErrors;
+        });
+      }
+    } else {
+      setErrors(prev => ({
+        ...prev,
+        supportingImages: "Please upload valid image files"
+      }));
+    }
+  }, [errors]);
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      const imageFiles = files.filter(file => {
+        if (file.size > 4 * 1024 * 1024) {
+          setErrors((prev) => ({
+            ...prev,
+            supportingImages: "File size must be less than 4MB"
+          }));
+          return false;
+        }
+        return file.type.startsWith('image/');
+      });
+      
+      if (imageFiles.length > 0) {
+        setUploadedImages(prev => [...prev, ...imageFiles]);
+        setFormData(prev => ({
+          ...prev,
+          supportingImages: [...prev.supportingImages, ...imageFiles]
+        }));
+        if (errors.supportingImages) {
+          setErrors((prev) => {
+            const newErrors = { ...prev };
+            delete newErrors.supportingImages;
+            return newErrors;
+          });
+        }
+      }
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      supportingImages: prev.supportingImages.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handlePreview = async () => {
+    try {
+      // Convert all images to base64 strings for preview
+      const imagePromises = [];
+      
+      // Convert display image if exists
+      let displayImageBase64 = null;
+      if (formData.displayImage) {
+        const displayImageBlob = await fetch(formData.displayImage).then(r => r.blob());
+        displayImageBase64 = await convertBlobToBase64(displayImageBlob);
+      }
+
+      // Convert supporting images
+      for (const file of uploadedImages) {
+        imagePromises.push(convertFileToBase64(file));
+      }
+
+      const supportingImagesBase64 = await Promise.all(imagePromises);
+
+      // Create preview data
+      const previewData: PreviewFundraiser = {
         ...formData,
-        status: "active",
+        id: `preview_${Date.now()}`,
+        status: "preview",
         createdAt: new Date().toISOString(),
         raised: 0,
-        goal: formData.goal,
-        supporters: 0
+        supporters: 0,
+        displayImage: displayImageBase64,
+        previewImages: supportingImagesBase64,
+        // Include other required fields with default values if needed
+        walletAddress: formData.walletAddress || "Preview Address",
+        goal: formData.goal || 0,
+        minimumDonation: formData.minimumDonation || 1
       };
 
-      // In a real app, you would save this to a database
-      // For this demo, we'll save to localStorage
-      const existingFundraisers = JSON.parse(
-        localStorage.getItem("fundraisers") || "[]"
-      );
-      localStorage.setItem(
-        "fundraisers",
-        JSON.stringify([fundraiserData, ...existingFundraisers])
-      );
+      // Save to localStorage for preview
+      localStorage.setItem('previewFundraiser', JSON.stringify(previewData));
 
-      // Also store the project data separately for the donation system
-      const projectsData = JSON.parse(
-        localStorage.getItem("projectsData") || "{}"
-      );
-      projectsData[fundraiserData.id] = {
-        id: fundraiserData.id,
-        title: fundraiserData.name,
-        description: fundraiserData.description,
-        image: fundraiserData.displayImage,
-        goal: fundraiserData.goal,
-        raised: 0,
-        category: fundraiserData.category,
-        endDate: fundraiserData.endDate,
-        acceptedTokens: fundraiserData.acceptedTokens,
-        minimumDonation: fundraiserData.minimumDonation,
-        blockchain: fundraiserData.blockchain
-      };
-      localStorage.setItem("projectsData", JSON.stringify(projectsData));
-
-      // Redirect to the projects page
-      router.push("/projects");
-    }, 1500);
-  }, [formData, router]);
-
-  const handlePreview = () => {
-    // Save draft to localStorage
-    const fundraisers = JSON.parse(localStorage.getItem("fundraisers") || "[]");
-    const draftFundraiser = {
-      id: `f${Date.now()}`,
-      ...formData,
-      status: "draft",
-      createdAt: new Date().toISOString(),
-      raised: 0,
-      goal: formData.goal,
-      supporters: 0
-    };
-    fundraisers.push(draftFundraiser);
-    localStorage.setItem("fundraisers", JSON.stringify(fundraisers));
-    
-    // Navigate to preview
-    router.push(`/fundraiser/preview/${draftFundraiser.id}`);
+      // Navigate to preview page
+      router.push(`/fundraiser/preview/${previewData.id}`);
+    } catch (error) {
+      console.error('Error creating preview:', error);
+      setErrors(prev => ({
+        ...prev,
+        preview: 'Failed to create preview. Please try again.'
+      }));
+    }
   };
 
   const handlePublish = async () => {
-    setIsSubmitting(true);
     try {
-      // Simulate blockchain transaction
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      setIsSubmitting(true);
 
-      // Create fundraiser data with proper typing
-      const fundraiserData: FundraiserFormData & {
-        id: string;
-        createdAt: string;
-        raised: number;
-        supporters: number;
-      } = {
-        id: `f${Date.now()}`,
+      // Validate required fields
+      const requiredFields = {
+        name: "Fundraiser name",
+        description: "Description",
+        category: "Category",
+        location: "Location",
+        walletAddress: "Wallet address",
+        goal: "Goal amount"
+      };
+
+      const missingFields = Object.entries(requiredFields)
+        .filter(([key]) => !formData[key as keyof FundraiserFormData])
+        .map(([_, label]) => label);
+
+      if (missingFields.length > 0) {
+        setErrors(prev => ({
+          ...prev,
+          submit: `Please fill in required fields: ${missingFields.join(", ")}`
+        }));
+        return;
+      }
+
+      // Create FormData for file uploads
+      const formDataToSubmit = new FormData();
+
+      // Convert images to proper format for upload
+      if (formData.displayImage) {
+        const displayImageBlob = await fetch(formData.displayImage).then(r => r.blob());
+        formDataToSubmit.append('displayImage', new File([displayImageBlob], 'display.jpg', { type: 'image/jpeg' }));
+      }
+
+      // Add supporting images
+      for (const file of formData.supportingImages) {
+        formDataToSubmit.append('supportingImages', file);
+      }
+
+      // Add other form data
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key !== 'displayImage' && key !== 'supportingImages') {
+          formDataToSubmit.append(key, 
+            typeof value === 'string' ? value : JSON.stringify(value)
+          );
+        }
+      });
+
+      // Submit to API
+      const response = await fetch('/api/fundraisers', {
+        method: 'POST',
+        body: formDataToSubmit,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create fundraiser');
+      }
+
+      const data = await response.json();
+
+      // Save to localStorage for immediate access
+      const fundraiserData = {
         ...formData,
-        displayImage: formData.displayImage || null,
+        id: data.id,
+        status: "active",
         createdAt: new Date().toISOString(),
         raised: 0,
-        goal: formData.goal,
         supporters: 0
       };
 
-      // Save to localStorage
+      // Update localStorage
       const existingFundraisers = JSON.parse(localStorage.getItem('fundraisers') || '[]');
       localStorage.setItem('fundraisers', JSON.stringify([fundraiserData, ...existingFundraisers]));
 
-      // Save project data
-      const projectData = {
-        id: fundraiserData.id,
-        name: formData.name,
-        description: formData.description,
-        createdAt: new Date().toISOString(),
-        raised: 0,
-        goal: formData.goal,
-        supporters: 0,
-        endDate: formData.endDate,
-        acceptedTokens: formData.acceptedTokens,
-        minimumDonation: formData.minimumDonation,
-        blockchain: formData.blockchain,
-        displayImage: formData.displayImage || null
-      };
+      // Show success message
+      alert('Fundraiser published successfully!');
+      
+      // Redirect to the new fundraiser page
+      router.push(`/fundraiser/${data.id}`);
 
-      const existingProjects = JSON.parse(localStorage.getItem('projectsData') || '[]');
-      localStorage.setItem('projectsData', JSON.stringify([projectData, ...existingProjects]));
-
-      router.push('/projects');
     } catch (error) {
       console.error('Error publishing fundraiser:', error);
+      setErrors(prev => ({
+        ...prev,
+        submit: 'Failed to publish fundraiser. Please try again.'
+      }));
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCancel = () => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel? All your progress will be lost.'
+    );
+    
+    if (confirmed) {
+      // Clean up any object URLs
+      if (formData.displayImage) {
+        URL.revokeObjectURL(formData.displayImage);
+      }
+      uploadedImages.forEach(file => {
+        if (file instanceof File) {
+          URL.revokeObjectURL(URL.createObjectURL(file));
+        }
+      });
+
+      // Reset form data
+      setFormData({
+        name: "",
+        description: "",
+        socialLinks: ["", ""],
+        category: "",
+        location: "",
+        displayImage: null,
+        supportingImages: [],
+        walletAddress: "",
+        goal: 0,
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        acceptedTokens: ["USD", "ETH", "BTC", "DAI"],
+        minimumDonation: 1,
+        blockchain: "Ethereum"
+      });
+
+      // Clear errors
+      setErrors({});
+      
+      // Reset other states
+      setUploadedImages([]);
+      setStep(1);
+      
+      // Navigate back to home
+      router.push('/');
+    }
+  };
+
+  const renderImagePreview = () => {
+    if (!formData.displayImage) {
+      return null;
+    }
+
+    return (
+      <div className="relative mt-4 rounded-lg overflow-hidden">
+        <img
+          src={formData.displayImage}
+          alt="Display"
+          className="w-full h-48 object-cover rounded-lg"
+        />
+        <button
+          onClick={() => {
+            setFormData(prev => ({ ...prev, displayImage: null }));
+            if (formData.displayImage) {
+              URL.revokeObjectURL(formData.displayImage);
+            }
+          }}
+          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    );
   };
 
   const renderStep = () => {
@@ -238,14 +544,17 @@ export default function CreateFundraiser() {
                 value={formData.name}
                 onChange={handleInputChange}
                 name="name"
-                className="w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white"
+                className={`w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white ${
+                  errors.name ? 'border border-red-500' : ''
+                }`}
                 placeholder="Enter your fundraiser name"
               />
+              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">
-                Tell us about your FUNDRAISE...
+                Tell us about your FUNDRAISE... <span className="text-red-500">*</span>
               </label>
               <div className="bg-[#1B2333] rounded-lg overflow-hidden">
                 <div className="border-b border-gray-700 p-2 flex items-center space-x-2">
@@ -262,10 +571,13 @@ export default function CreateFundraiser() {
                   value={formData.description}
                   onChange={handleInputChange}
                   name="description"
-                  className="w-full bg-transparent p-4 min-h-[200px] text-white"
+                  className={`w-full bg-transparent p-4 min-h-[200px] text-white ${
+                    errors.description ? 'border border-red-500' : ''
+                  }`}
                   placeholder="Describe your fundraiser..."
                 />
               </div>
+              {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
             </div>
           </div>
         );
@@ -278,18 +590,23 @@ export default function CreateFundraiser() {
               </label>
               <div className="space-y-2">
                 {formData.socialLinks.map((link, index) => (
-                  <input
-                    key={index}
-                    type="url"
-                    value={link}
-                    onChange={handleInputChange}
-                    name={`socialLinks.${index}`}
-                    className="w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white"
-                    placeholder="Add your social media link"
-                  />
+                  <div key={index} className="relative">
+                    <input
+                      type="url"
+                      value={link}
+                      onChange={(e) => handleSocialLinkChange(index, e.target.value)}
+                      className={`w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white placeholder-gray-400 ${
+                        errors.socialLinks ? 'border border-red-500' : ''
+                      }`}
+                      placeholder="Add your social media link"
+                    />
+                  </div>
                 ))}
               </div>
               <p className="text-xs text-gray-400 mt-1">Add your project's social media links</p>
+              {errors.socialLinks && (
+                <p className="text-red-500 text-sm mt-1">{errors.socialLinks}</p>
+              )}
             </div>
 
             <div>
@@ -299,7 +616,7 @@ export default function CreateFundraiser() {
                   <button
                     key={category}
                     onClick={() => handleCategorySelect(category)}
-                    className={`px-4 py-2 rounded-full text-sm ${
+                    className={`px-4 py-2 rounded-full text-sm transition-colors ${
                       formData.category === category
                         ? "bg-[#0066FF] text-white"
                         : "bg-[#1B2333] text-gray-400 hover:bg-[#232B3D]"
@@ -309,8 +626,8 @@ export default function CreateFundraiser() {
                   </button>
                 ))}
                 <button
-                  onClick={() => setFormData({ ...formData, category: "Other" })}
-                  className={`px-4 py-2 rounded-full text-sm ${
+                  onClick={() => handleCategorySelect("Other")}
+                  className={`px-4 py-2 rounded-full text-sm transition-colors ${
                     formData.category === "Other"
                       ? "bg-[#0066FF] text-white"
                       : "bg-[#1B2333] text-gray-400 hover:bg-[#232B3D]"
@@ -319,13 +636,18 @@ export default function CreateFundraiser() {
                   Other
                 </button>
               </div>
+              {errors.category && (
+                <p className="text-red-500 text-sm mt-1">{errors.category}</p>
+              )}
               {formData.category === "Other" && (
                 <input
                   type="text"
                   value={formData.otherCategory}
                   onChange={handleInputChange}
                   name="otherCategory"
-                  className="mt-2 w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white"
+                  className={`mt-2 w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white ${
+                    errors.otherCategory ? 'border border-red-500' : ''
+                  }`}
                   placeholder="Specify category"
                 />
               )}
@@ -364,29 +686,73 @@ export default function CreateFundraiser() {
                 className="hidden"
                 onChange={handleFileChange}
               />
+              {renderImagePreview()}
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">
-                Add supporting image
+                Add supporting images
               </label>
-              <div className="border-2 border-dashed border-gray-700 rounded-lg p-8 text-center">
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  isDragging ? 'border-[#0066FF] bg-[#1B2333]' : 'border-gray-700'
+                }`}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              >
                 <div className="mb-4">
-                  <Image
-                    src="/placeholder.svg"
-                    alt="Upload"
-                    width={48}
-                    height={48}
-                    className="mx-auto"
-                  />
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
                 </div>
                 <p className="text-sm text-gray-400 mb-2">
-                  Drag & drop an image here or, upload from device.
+                  Drag & drop images here or,{' '}
+                  <label className="text-[#0066FF] cursor-pointer hover:underline">
+                    browse
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFileInput}
+                    />
+                  </label>
                 </p>
                 <p className="text-xs text-gray-500">
-                  Suggested image size: 960px width by 600px height. Max image size is 4MB.
+                  Supported formats: JPG, PNG, GIF. Max file size: 4MB
                 </p>
               </div>
+
+              {uploadedImages.length > 0 && (
+                <div className="mt-4 grid grid-cols-3 gap-4">
+                  {uploadedImages.map((file, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Uploaded ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );
@@ -401,8 +767,7 @@ export default function CreateFundraiser() {
               </p>
               <button
                 onClick={() => {
-                  // Add wallet connection logic here
-                  setFormData({ ...formData, walletAddress: "0x..." });
+                  setFormData(prev => ({ ...prev, walletAddress: "0x..." }));
                 }}
                 className="text-[#0066FF] hover:underline"
               >
@@ -410,27 +775,39 @@ export default function CreateFundraiser() {
               </button>
             </div>
 
-            <div className="pt-8 flex items-center space-x-4">
+            <div className="pt-8 flex items-center gap-4">
               <button
                 onClick={handlePreview}
-                className="flex-1 bg-[#0066FF] text-white py-2.5 rounded-lg hover:bg-[#0052CC]"
+                className="flex-1 bg-[#0066FF] text-white py-2.5 rounded-lg hover:bg-[#0052CC] transition-colors"
+                disabled={isSubmitting}
               >
-                Preview
+                {isSubmitting ? 'Loading...' : 'Preview'}
               </button>
               <button
                 onClick={handlePublish}
-                className="flex-1 bg-gray-600 text-white py-2.5 rounded-lg hover:bg-gray-500"
-                disabled={!formData.walletAddress}
+                className={`flex-1 py-2.5 rounded-lg transition-colors ${
+                  isSubmitting || !formData.walletAddress
+                    ? 'bg-gray-600 cursor-not-allowed'
+                    : 'bg-[#0066FF] hover:bg-[#0052CC]'
+                } text-white`}
+                disabled={isSubmitting || !formData.walletAddress}
               >
-                Publish
+                {isSubmitting ? 'Publishing...' : 'Publish'}
               </button>
               <button
-                onClick={() => router.push("/")}
-                className="flex-1 bg-[#0066FF] text-white py-2.5 rounded-lg hover:bg-[#0052CC]"
+                onClick={handleCancel}
+                className="flex-1 bg-[#0066FF] text-white py-2.5 rounded-lg hover:bg-[#0052CC] transition-colors"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
             </div>
+
+            {(errors.preview || errors.submit) && (
+              <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+                {errors.preview || errors.submit}
+              </div>
+            )}
           </div>
         );
       default:
@@ -455,13 +832,9 @@ export default function CreateFundraiser() {
                   Start your <span className="text-[#0066FF]">FUNDRAISE</span> now
                 </h1>
                 <div className="mt-8">
-                  <Image
-                    src="/hands.png"
-                    alt="Fundraising"
-                    width={400}
-                    height={400}
-                    className="opacity-50"
-                  />
+                  <div className="w-full h-64 bg-gradient-to-b from-[#1a2436] to-[#111827] rounded-lg flex items-center justify-center">
+                    <Upload className="h-16 w-16 text-[#0066FF] opacity-50" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -484,7 +857,7 @@ export default function CreateFundraiser() {
                 <div className="mt-8">
                   <button
                     onClick={handleNext}
-                    className="w-full bg-[#0066FF] text-white py-2.5 rounded-lg hover:bg-[#0052CC]"
+                    className="w-full bg-[#0066FF] text-white py-2.5 rounded-lg hover:bg-[#0052CC] transition-colors"
                   >
                     Next →
                   </button>
@@ -497,3 +870,22 @@ export default function CreateFundraiser() {
     </div>
   );
 }
+
+// Utility functions for image conversion
+const convertBlobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+const convertFileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};

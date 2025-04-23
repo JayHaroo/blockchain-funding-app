@@ -78,6 +78,44 @@ export default function PreviewPage({ params }: PreviewPageProps) {
     );
   };
 
+  const compressImage = async (base64String: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+
+        // Calculate new dimensions (max 800px width/height while maintaining aspect ratio)
+        let width = img.width;
+        let height = img.height;
+        const maxSize = 800;
+
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          } else {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compress to JPEG with 70% quality
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = base64String;
+    });
+  };
+
   const handlePublish = async () => {
     try {
       if (!fundraiser) return;
@@ -102,25 +140,71 @@ export default function PreviewPage({ params }: PreviewPageProps) {
         supporters: 0
       };
 
-      // Handle images
-      const displayImageUrl = fundraiser.displayImage;
-      const supportingImageUrls = [...fundraiser.previewImages];
+      // Compress images
+      let displayImageUrl = null;
+      if (fundraiser.displayImage) {
+        try {
+          displayImageUrl = await compressImage(fundraiser.displayImage);
+        } catch (error) {
+          console.error('Error compressing display image:', error);
+          displayImageUrl = fundraiser.displayImage;
+        }
+      }
 
-      // Add image URLs to fundraiser data
+      const supportingImageUrls = await Promise.all(
+        fundraiser.previewImages.map(async (img) => {
+          try {
+            return await compressImage(img);
+          } catch (error) {
+            console.error('Error compressing supporting image:', error);
+            return img;
+          }
+        })
+      );
+
+      // Add compressed image URLs to fundraiser data
       const finalFundraiserData = {
         ...fundraiserData,
         displayImage: displayImageUrl,
         supportingImages: supportingImageUrls
       };
 
-      // Save to localStorage
+      // Save to localStorage with chunking for large datasets
       try {
+        // Save fundraiser data
         const existingFundraisers = JSON.parse(localStorage.getItem('fundraisers') || '[]');
+        
+        // Remove old data if storage is getting full
+        while (existingFundraisers.length > 50) {
+          existingFundraisers.pop();
+        }
+        
         const newFundraisers = [finalFundraiserData, ...existingFundraisers];
-        localStorage.setItem('fundraisers', JSON.stringify(newFundraisers));
+        
+        try {
+          localStorage.setItem('fundraisers', JSON.stringify(newFundraisers));
+        } catch (storageError) {
+          // If storage fails, try removing more old items
+          while (existingFundraisers.length > 0) {
+            existingFundraisers.pop();
+            try {
+              localStorage.setItem('fundraisers', JSON.stringify([finalFundraiserData, ...existingFundraisers]));
+              break;
+            } catch (e) {
+              continue;
+            }
+          }
+        }
 
-        // Save to projects data
+        // Save to projects data with similar chunking approach
         const projectsData = JSON.parse(localStorage.getItem('projectsData') || '{}');
+        
+        // Clean up old projects if needed
+        const projectKeys = Object.keys(projectsData);
+        while (projectKeys.length > 50) {
+          delete projectsData[projectKeys.pop() as string];
+        }
+        
         projectsData[finalFundraiserData.id] = {
           id: finalFundraiserData.id,
           title: finalFundraiserData.name,
@@ -140,7 +224,21 @@ export default function PreviewPage({ params }: PreviewPageProps) {
           createdAt: finalFundraiserData.createdAt,
           supportingImages: finalFundraiserData.supportingImages
         };
-        localStorage.setItem('projectsData', JSON.stringify(projectsData));
+
+        try {
+          localStorage.setItem('projectsData', JSON.stringify(projectsData));
+        } catch (storageError) {
+          // If storage fails, try removing more old items
+          while (Object.keys(projectsData).length > 1) {
+            delete projectsData[Object.keys(projectsData)[0]];
+            try {
+              localStorage.setItem('projectsData', JSON.stringify(projectsData));
+              break;
+            } catch (e) {
+              continue;
+            }
+          }
+        }
 
         // Clear preview data
         localStorage.removeItem('previewFundraiser');
@@ -155,7 +253,6 @@ export default function PreviewPage({ params }: PreviewPageProps) {
         console.error('Error saving fundraiser:', error);
         throw new Error('Failed to save fundraiser data');
       }
-
     } catch (error) {
       console.error('Error publishing fundraiser:', error);
       alert('Failed to publish fundraiser. Please try again.');

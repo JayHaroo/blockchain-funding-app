@@ -5,8 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Pencil, MapPin, LinkIcon, Camera } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Pencil, MapPin, LinkIcon } from "lucide-react";
 
 // Update the component to include profile picture upload functionality
 export default function ProfilePage() {
@@ -18,7 +17,7 @@ export default function ProfilePage() {
   const [editingBio, setEditingBio] = useState(false);
   const [tempBio, setTempBio] = useState(bio);
 
-  const [name, setName] = useState(user?.name || "sean");
+  const [name, setName] = useState(user?.name || "John");
   const [location, setLocation] = useState("San Francisco, CA");
   const [website, setWebsite] = useState("https://mywebsite.com");
   const [editingProfile, setEditingProfile] = useState(false);
@@ -35,9 +34,6 @@ export default function ProfilePage() {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -91,30 +87,87 @@ export default function ProfilePage() {
     // For example: updateUserProfile({ name: tempName, location: tempLocation, website: tempWebsite });
   };
 
-  const handleImageClick = () => {
-    fileInputRef.current?.click();
+  const handleProfilePictureClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleCoverImageClick = () => {
+    if (coverInputRef.current) {
+      coverInputRef.current.click();
+    }
+  };
 
-    try {
-      // Convert to base64
+  const handleProfilePictureChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setPreviewImage(base64String);
-        
-        // Update user avatar in auth context
-        updateUser({ avatar: base64String });
+      reader.onload = async (event) => {
+        if (event.target && typeof event.target.result === "string") {
+          const newProfilePic = event.target.result;
+          setProfilePicture(newProfilePic);
 
-        // Store in localStorage for persistence
-        localStorage.setItem('userAvatar', base64String);
+          // Update user data in localStorage
+          const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+          userData.avatar = newProfilePic;
+          localStorage.setItem('userData', JSON.stringify(userData));
+
+          // Update the user avatar in the auth context
+          updateUser({ 
+            ...user,
+            avatar: newProfilePic 
+          });
+
+          // Update all fundraisers with the new profile picture
+          try {
+            const projectsData = JSON.parse(localStorage.getItem('projectsData') || '{}');
+            const updatedProjects = Object.entries(projectsData).reduce((acc: any, [key, project]: [string, any]) => {
+              if (project.organizer === user.name) {
+                acc[key] = {
+                  ...project,
+                  organizerAvatar: newProfilePic
+                };
+              } else {
+                acc[key] = project;
+              }
+              return acc;
+            }, {});
+            localStorage.setItem('projectsData', JSON.stringify(updatedProjects));
+
+            // Update fundraisers list if exists
+            const fundraisers = JSON.parse(localStorage.getItem('fundraisers') || '[]');
+            const updatedFundraisers = fundraisers.map((fundraiser: any) => {
+              if (fundraiser.organizer === user.name) {
+                return {
+                  ...fundraiser,
+                  organizerAvatar: newProfilePic
+                };
+              }
+              return fundraiser;
+            });
+            localStorage.setItem('fundraisers', JSON.stringify(updatedFundraisers));
+          } catch (error) {
+            console.error('Error updating projects with new profile picture:', error);
+          }
+        }
       };
       reader.readAsDataURL(file);
-    } catch (error) {
-      console.error("Error processing image:", error);
+    }
+  };
+
+  const handleCoverImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target && typeof event.target.result === "string") {
+          setCoverImage(event.target.result);
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -224,316 +277,166 @@ export default function ProfilePage() {
           {/* Main Content */}
           <div className="md:col-span-2">
             {/* Profile Header */}
-            <div className="bg-gray-900 rounded-xl overflow-hidden mb-6">
-              <div
-                className="h-32 bg-blue-600 relative group"
-                style={{
-                  backgroundImage: `url(${coverImage})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
+            <div className="relative mb-8">
+              {/* Cover Image */}
+              <div 
+                className="relative h-[200px] w-full rounded-xl overflow-hidden cursor-pointer"
+                onClick={handleCoverImageClick}
               >
-                {editingProfile && (
-                  <button
-                    onClick={handleImageClick}
-                    className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <span className="text-white bg-gray-800 px-3 py-1 rounded-lg">
-                      Change Cover
-                    </span>
-                    <input
-                      ref={coverInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const files = e.target.files;
-                        if (files && files.length > 0) {
-                          const file = files[0];
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            if (event.target && typeof event.target.result === "string") {
-                              setCoverImage(event.target.result);
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                  </button>
-                )}
+                <Image
+                  src={coverImage}
+                  alt="Cover"
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Pencil className="w-6 h-6" />
+                </div>
               </div>
-              <div className="p-6 relative">
-                <div
-                  className="absolute -top-12 left-6 border-4 border-gray-900 rounded-full overflow-hidden group cursor-pointer"
-                  onClick={handleImageClick}
+
+              {/* Profile Picture */}
+              <div className="absolute -bottom-16 left-8">
+                <div 
+                  className="relative w-32 h-32 rounded-full border-4 border-black overflow-hidden cursor-pointer group"
+                  onClick={handleProfilePictureClick}
                 >
                   <Image
-                    src={previewImage || profilePicture || "/placeholder.svg"}
+                    src={profilePicture}
                     alt={name}
-                    width={80}
-                    height={80}
-                    className="bg-gray-800"
+                    fill
+                    className="object-cover"
                   />
-                  <div
-                    className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                  >
-                    <Camera className="h-5 w-5 text-white" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Pencil className="w-6 h-6" />
                   </div>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageChange}
-                />
-
-                <div className="mt-10 flex justify-between items-start">
-                  <div>
-                    {editingProfile ? (
-                      <input
-                        type="text"
-                        value={tempName}
-                        onChange={(e) => setTempName(e.target.value)}
-                        className="text-2xl font-bold bg-gray-800 border border-gray-700 rounded p-1 mb-1 w-full"
-                      />
-                    ) : (
-                      <h1 className="text-2xl font-bold">{name}</h1>
-                    )}
-                    <p className="text-gray-400 text-sm">
-                      {formatDate()} • Web3 Enthusiast
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setEditingProfile(!editingProfile)}
-                    className="p-2 rounded-full hover:bg-gray-800"
-                  >
-                    {editingProfile ? (
-                      <svg
-                        className="h-5 w-5 text-gray-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    ) : (
-                      <Pencil className="h-5 w-5 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-
-                <div className="mt-4">
-                  {editingBio ? (
-                    <div className="space-y-3">
-                      <textarea
-                        value={tempBio}
-                        onChange={(e) => setTempBio(e.target.value)}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white"
-                        rows={3}
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleSaveBio}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => {
-                            setTempBio(bio);
-                            setEditingBio(false);
-                          }}
-                          className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="group relative">
-                      <p className="text-gray-300">{bio}</p>
-                      <button
-                        onClick={() => {
-                          setTempBio(bio);
-                          setEditingBio(true);
-                        }}
-                        className="absolute top-0 right-0 p-1 rounded-full bg-gray-800 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Pencil className="h-4 w-4 text-gray-400" />
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
+
+              {/* Hidden file inputs */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleProfilePictureChange}
+              />
+              <input
+                type="file"
+                ref={coverInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleCoverImageChange}
+              />
             </div>
 
-            {/* Additional Profile Information */}
-            <div className="mt-6 space-y-4">
-              {/* Location */}
-              <div className="group relative">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-gray-400" />
-                  {editingProfile ? (
+            {/* Profile Content */}
+            <div className="mt-20">
+              {editingProfile ? (
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    className="bg-gray-900 text-white text-2xl font-bold p-2 rounded-lg w-full"
+                  />
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-400" />
                     <input
                       type="text"
                       value={tempLocation}
                       onChange={(e) => setTempLocation(e.target.value)}
-                      className="flex-1 bg-gray-800 border border-gray-700 rounded p-1 text-white text-sm"
-                      placeholder="Your location"
+                      className="bg-gray-900 text-gray-300 p-2 rounded-lg flex-1"
                     />
-                  ) : (
-                    <span className="text-gray-300 text-sm">{location}</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Website */}
-              <div className="group relative">
-                <div className="flex items-center gap-2">
-                  <LinkIcon className="w-5 h-5 text-gray-400" />
-                  {editingProfile ? (
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <LinkIcon className="w-4 h-4 text-gray-400" />
                     <input
                       type="text"
                       value={tempWebsite}
                       onChange={(e) => setTempWebsite(e.target.value)}
-                      className="flex-1 bg-gray-800 border border-gray-700 rounded p-1 text-white text-sm"
-                      placeholder="Your website"
+                      className="bg-gray-900 text-blue-400 p-2 rounded-lg flex-1"
                     />
-                  ) : (
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveProfile}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingProfile(false)}
+                      className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-bold">{name}</h1>
+                    <button
+                      onClick={() => setEditingProfile(true)}
+                      className="p-2 text-gray-400 hover:text-white transition-colors"
+                    >
+                      <Pencil className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <MapPin className="w-4 h-4" />
+                    <span>{location}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <LinkIcon className="w-4 h-4 text-gray-400" />
                     <a
                       href={website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-400 text-sm hover:underline"
+                      className="text-blue-400 hover:underline"
                     >
                       {website}
                     </a>
-                  )}
-                </div>
-              </div>
-
-              {/* Save/Cancel buttons for profile editing */}
-              {editingProfile && (
-                <div className="flex gap-2 mt-4">
-                  <button
-                    onClick={handleSaveProfile}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium"
-                  >
-                    Save Profile
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTempName(name);
-                      setTempLocation(location);
-                      setTempWebsite(website);
-                      setEditingProfile(false);
-                    }}
-                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium"
-                  >
-                    Cancel
-                  </button>
+                  </div>
                 </div>
               )}
-            </div>
 
-            {/* Recent Activity */}
-            <div className="bg-gray-900 rounded-xl p-6 mb-6 mt-6">
-              <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
-
-              <div className="space-y-4">
-                <div className="border-l-2 border-blue-500 pl-4 py-1">
-                  <p className="text-sm text-gray-400">Apr 5, 2025</p>
-                  <p className="text-white">
-                    Created a new fundraiser:{" "}
-                    <Link
-                      href="/fundraiser/blockchain-education"
-                      className="text-blue-400 hover:underline"
-                    >
-                      Blockchain Education Initiative
-                    </Link>
-                  </p>
+              {/* Bio section */}
+              <div className="mt-8">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-lg font-semibold">About</h2>
+                  <button
+                    onClick={() => setEditingBio(true)}
+                    className="p-2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <Pencil className="w-5 h-5" />
+                  </button>
                 </div>
-
-                <div className="border-l-2 border-green-500 pl-4 py-1">
-                  <p className="text-sm text-gray-400">Apr 3, 2025</p>
-                  <p className="text-white">
-                    Donated <span className="text-green-400">$50</span> to{" "}
-                    <Link
-                      href="/fundraiser/medical-support"
-                      className="text-blue-400 hover:underline"
-                    >
-                      Medical Support for Children
-                    </Link>
-                  </p>
-                </div>
-
-                <div className="border-l-2 border-purple-500 pl-4 py-1">
-                  <p className="text-sm text-gray-400">Mar 28, 2025</p>
-                  <p className="text-white">
-                    Joined the{" "}
-                    <Link
-                      href="/community/web3-developers"
-                      className="text-blue-400 hover:underline"
-                    >
-                      Web3 Developers
-                    </Link>{" "}
-                    community
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* User Fundraisers */}
-            <div className="bg-gray-900 rounded-xl p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">My Fundraisers</h2>
-                <Link
-                  href="/fundraiser/create"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium"
-                >
-                  Create New
-                </Link>
-              </div>
-
-              <div className="space-y-4">
-                <div className="border border-gray-800 rounded-lg p-4 hover:bg-gray-800/50 transition-colors">
-                  <div className="flex justify-between">
-                    <h3 className="font-medium">
-                      Blockchain Education Initiative
-                    </h3>
-                    <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-1 rounded">
-                      Active
-                    </span>
+                {editingBio ? (
+                  <div className="space-y-4">
+                    <textarea
+                      value={tempBio}
+                      onChange={(e) => setTempBio(e.target.value)}
+                      className="w-full h-32 bg-gray-900 text-white p-4 rounded-lg resize-none"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveBio}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingBio(false)}
+                        className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Goal: $10,000 • Raised: $2,500 (25%)
-                  </p>
-                  <div className="h-1.5 w-full bg-gray-800 rounded-full mt-2">
-                    <div
-                      className="h-full bg-blue-500 rounded-full"
-                      style={{ width: "25%" }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="border border-gray-800 rounded-lg p-4 hover:bg-gray-800/50 transition-colors">
-                  <div className="flex justify-between">
-                    <h3 className="font-medium">Web3 Developer Scholarship</h3>
-                    <span className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">
-                      Draft
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Goal: $5,000 • Not published yet
-                  </p>
-                </div>
+                ) : (
+                  <p className="text-gray-300 whitespace-pre-wrap">{bio}</p>
+                )}
               </div>
             </div>
           </div>

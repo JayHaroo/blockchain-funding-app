@@ -45,15 +45,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    const storedAvatar = localStorage.getItem("userAvatar");
-    
     if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      // If there's a stored avatar, use it
-      if (storedAvatar) {
-        parsedUser.avatar = storedAvatar;
-      }
-      setUser(parsedUser);
+      setUser(JSON.parse(storedUser));
+    } else {
+      const fallbackAvatar = "/avatar.jpg";
+      const avatar = isValidImagePath(fallbackAvatar)
+        ? fallbackAvatar
+        : undefined;
+
+      setUser({
+        id: "default_user",
+        name: "John Doe",
+        email: "john.doe@example.com",
+        avatar,
+      });
     }
     setIsLoading(false);
   }, []);
@@ -72,12 +77,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (!foundUser) throw new Error("Invalid email or password");
 
+      // Fix: Use rest operator without naming the excluded property
       const { password: _, ...userWithoutPassword } = foundUser;
 
-      // Get stored avatar if exists
-      const storedAvatar = localStorage.getItem("userAvatar");
-      if (storedAvatar) {
-        userWithoutPassword.avatar = storedAvatar;
+      // Optional: check if avatar is valid
+      if (
+        userWithoutPassword.avatar &&
+        !isValidImagePath(userWithoutPassword.avatar)
+      ) {
+        userWithoutPassword.avatar = undefined;
       }
 
       localStorage.setItem("user", JSON.stringify(userWithoutPassword));
@@ -106,16 +114,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const userExists = users.some((u) => u.email === email);
       if (userExists) throw new Error("User already exists");
 
+      const avatar = "/avatar.jpg";
       const newUser = {
         id: `user_${Date.now()}`,
         email,
         password,
         name,
-        avatar: undefined
+        avatar: isValidImagePath(avatar) ? avatar : undefined,
       };
 
       localStorage.setItem("users", JSON.stringify([...users, newUser]));
 
+      // Fix: Use rest operator without naming the excluded property
       const { password: _, ...userWithoutPassword } = newUser;
 
       localStorage.setItem("user", JSON.stringify(userWithoutPassword));
@@ -131,30 +141,68 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signOut = () => {
     localStorage.removeItem("user");
-    // Don't remove avatar on signout to persist it
     setUser(null);
   };
 
   const updateUser = (updates: Partial<User>) => {
     if (user) {
-      const updatedUser = { ...user, ...updates };
-
-      // If updating avatar, store it separately
-      if (updates.avatar) {
-        localStorage.setItem("userAvatar", updates.avatar);
+      let avatar = updates.avatar;
+      if (avatar && !isValidImagePath(avatar) && !avatar.startsWith('data:image/')) {
+        avatar = undefined;
       }
 
+      const updatedUser = { ...user, ...updates, avatar };
+
+      // Update user in state and localStorage
       setUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      // Update in users list
+      // Update users list
       const users = JSON.parse(
         localStorage.getItem("users") || "[]"
       ) as UserWithPassword[];
       const updatedUsers = users.map((u) =>
-        u.id === user.id ? { ...u, ...updates } : u
+        u.id === user.id ? { ...u, ...updates, avatar } : u
       );
       localStorage.setItem("users", JSON.stringify(updatedUsers));
+
+      // Update user data in userData
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      userData.avatar = avatar;
+      localStorage.setItem('userData', JSON.stringify(userData));
+
+      // Update all fundraisers with the new profile picture
+      try {
+        // Update projects data
+        const projectsData = JSON.parse(localStorage.getItem('projectsData') || '{}');
+        const updatedProjects = Object.entries(projectsData).reduce((acc: any, [key, project]: [string, any]) => {
+          if (project.organizer === user.name) {
+            acc[key] = {
+              ...project,
+              organizerAvatar: avatar
+            };
+          } else {
+            acc[key] = project;
+          }
+          return acc;
+        }, {});
+        localStorage.setItem('projectsData', JSON.stringify(updatedProjects));
+
+        // Update fundraisers list
+        const fundraisers = JSON.parse(localStorage.getItem('fundraisers') || '[]');
+        const updatedFundraisers = fundraisers.map((fundraiser: any) => {
+          if (fundraiser.organizer === user.name) {
+            return {
+              ...fundraiser,
+              organizerAvatar: avatar
+            };
+          }
+          return fundraiser;
+        });
+        localStorage.setItem('fundraisers', JSON.stringify(updatedFundraisers));
+      } catch (error) {
+        console.error('Error updating projects with new profile picture:', error);
+      }
     }
   };
 

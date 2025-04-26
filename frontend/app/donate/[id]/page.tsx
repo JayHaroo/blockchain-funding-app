@@ -33,15 +33,14 @@ type ProjectData = {
 };
 
 type PageProps = {
-  params: Promise<{
+  params: {
     id: string;
-  }>;
+  };
 };
 
-export default async function DonatePage({ params }: PageProps) {
+export default function DonatePage({ params }: PageProps) {
   const router = useRouter();
-  const resolvedParams = await params;
-  const projectId = resolvedParams.id;
+  const projectId = params.id;
 
   const [step, setStep] = useState(1);
   const [donationType, setDonationType] = useState<"one-time" | "recurring">("one-time");

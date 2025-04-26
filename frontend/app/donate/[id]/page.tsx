@@ -33,15 +33,15 @@ type ProjectData = {
 };
 
 type PageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
+  searchParams?: { [key: string]: string | string[] | undefined };
 };
 
-export default function DonatePage({ params }: PageProps) {
+export default function DonatePage(props: PageProps) {
   const router = useRouter();
-  const projectId = params.id;
-
+  const [projectId, setProjectId] = useState<string>("");
   const [step, setStep] = useState(1);
   const [donationType, setDonationType] = useState<"one-time" | "recurring">("one-time");
   const [selectedToken, setSelectedToken] = useState("");
@@ -53,6 +53,14 @@ export default function DonatePage({ params }: PageProps) {
   const [isNetworkModalOpen, setIsNetworkModalOpen] = useState(false);
   const [networkError, setNetworkError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    const loadParams = async () => {
+      const resolvedParams = await props.params;
+      setProjectId(resolvedParams.id);
+    };
+    loadParams();
+  }, [props.params]);
 
   // Mock function to simulate blockchain transaction
   const mockBlockchainTransaction = async (): Promise<string> => {

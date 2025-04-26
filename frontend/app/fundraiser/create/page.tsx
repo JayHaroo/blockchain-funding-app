@@ -2,14 +2,14 @@
 
 import React from "react";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 
-import { ArrowRight, ArrowLeft, Upload, Heart, X } from "lucide-react";
+import { ArrowLeft, Upload, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Image from "next/image";
 
 // Rich text editor icons and components
 const EditorIcons = {
@@ -18,7 +18,7 @@ const EditorIcons = {
   Bold: () => <span className="font-bold">B</span>,
   Italic: () => <span className="italic">I</span>,
   Underline: () => <span className="underline">U</span>,
-  Quote: () => <span>"</span>,
+  Quote: () => <span>&quot;</span>,
   List: () => <span>•</span>,
   Link: () => <span>🔗</span>,
   Image: () => <span>📷</span>,
@@ -52,9 +52,19 @@ interface PreviewFundraiser extends FundraiserFormData {
 }
 
 const CATEGORIES = [
-  "Animals", "Business", "Calamity", "Community",
-  "Competition", "Creative", "Education", "Events",
-  "Faith", "Family", "Funerals", "Medical", "Sports"
+  "Animals",
+  "Business",
+  "Calamity",
+  "Community",
+  "Competition",
+  "Creative",
+  "Education",
+  "Events",
+  "Faith",
+  "Family",
+  "Funerals",
+  "Medical",
+  "Sports",
 ];
 
 export default function CreateFundraiser() {
@@ -69,11 +79,13 @@ export default function CreateFundraiser() {
     supportingImages: [],
     walletAddress: "",
     goal: 0,
-    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     acceptedTokens: ["USD", "ETH", "BTC", "DAI"],
     minimumDonation: 1,
     blockchain: "Ethereum",
-    displayImage: null
+    displayImage: null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -84,33 +96,6 @@ export default function CreateFundraiser() {
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
   const [dateError, setDateError] = useState("");
-
-  const validateStep = (currentStep: number): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    switch (currentStep) {
-      case 1:
-        if (!formData.name.trim()) {
-          newErrors.name = "Fundraiser name is required";
-        }
-        break;
-      case 2:
-        break;
-      case 3:
-        break;
-      case 4:
-        if (!formData.walletAddress) {
-          newErrors.walletAddress = "Wallet address is required";
-        }
-        if (formData.goal <= 0) {
-          newErrors.goal = "Goal amount must be greater than 0";
-        }
-        break;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -128,36 +113,42 @@ export default function CreateFundraiser() {
     [errors]
   );
 
-  const handleSocialLinkChange = useCallback((index: number, value: string) => {
-    setFormData(prev => {
-      const newSocialLinks = [...prev.socialLinks];
-      newSocialLinks[index] = value;
-      return { ...prev, socialLinks: newSocialLinks };
-    });
-    // Clear error when user starts typing
-    if (errors.socialLinks) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.socialLinks;
-        return newErrors;
+  const handleSocialLinkChange = useCallback(
+    (index: number, value: string) => {
+      setFormData((prev) => {
+        const newSocialLinks = [...prev.socialLinks];
+        newSocialLinks[index] = value;
+        return { ...prev, socialLinks: newSocialLinks };
       });
-    }
-  }, [errors]);
+      // Clear error when user starts typing
+      if (errors.socialLinks) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.socialLinks;
+          return newErrors;
+        });
+      }
+    },
+    [errors]
+  );
 
-  const handleCategorySelect = useCallback((category: string) => {
-    setFormData(prev => ({ ...prev, category }));
-    if (errors.category) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.category;
-        return newErrors;
-      });
-    }
-  }, [errors]);
+  const handleCategorySelect = useCallback(
+    (category: string) => {
+      setFormData((prev) => ({ ...prev, category }));
+      if (errors.category) {
+        setErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors.category;
+          return newErrors;
+        });
+      }
+    },
+    [errors]
+  );
 
   const handleNext = useCallback(() => {
     if (step < 4) {
-      setStep(prev => prev + 1);
+      setStep((prev) => prev + 1);
     }
   }, [step]);
 
@@ -171,12 +162,12 @@ export default function CreateFundraiser() {
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
         const file = e.target.files[0];
-        
+
         // Validate file type
-        if (!file.type.startsWith('image/')) {
+        if (!file.type.startsWith("image/")) {
           setErrors((prev) => ({
             ...prev,
-            displayImage: "Please upload an image file"
+            displayImage: "Please upload an image file",
           }));
           return;
         }
@@ -185,7 +176,7 @@ export default function CreateFundraiser() {
         if (file.size > 4 * 1024 * 1024) {
           setErrors((prev) => ({
             ...prev,
-            displayImage: "File size must be less than 4MB"
+            displayImage: "File size must be less than 4MB",
           }));
           return;
         }
@@ -193,10 +184,10 @@ export default function CreateFundraiser() {
         try {
           // Create a preview URL
           const objectUrl = URL.createObjectURL(file);
-          
+
           setFormData((prev) => ({
             ...prev,
-            displayImage: objectUrl
+            displayImage: objectUrl,
           }));
 
           // Clear error if exists
@@ -208,10 +199,10 @@ export default function CreateFundraiser() {
             });
           }
         } catch (error) {
-          console.error('Error processing image:', error);
+          console.error("Error processing image:", error);
           setErrors((prev) => ({
             ...prev,
-            displayImage: "Error processing image. Please try again."
+            displayImage: "Error processing image. Please try again.",
           }));
         }
       }
@@ -236,73 +227,76 @@ export default function CreateFundraiser() {
     e.stopPropagation();
   };
 
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
 
-    const files = Array.from(e.dataTransfer.files);
-    const validImageFiles: File[] = [];
+      const files = Array.from(e.dataTransfer.files);
+      const validImageFiles: File[] = [];
 
-    for (const file of files) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        continue;
+      for (const file of files) {
+        // Validate file type
+        if (!file.type.startsWith("image/")) {
+          continue;
+        }
+
+        // Validate file size
+        if (file.size > 4 * 1024 * 1024) {
+          setErrors((prev) => ({
+            ...prev,
+            supportingImages: "File size must be less than 4MB",
+          }));
+          continue;
+        }
+
+        validImageFiles.push(file);
       }
 
-      // Validate file size
-      if (file.size > 4 * 1024 * 1024) {
+      if (validImageFiles.length > 0) {
+        setUploadedImages((prev) => [...prev, ...validImageFiles]);
+        setFormData((prev) => ({
+          ...prev,
+          supportingImages: [...prev.supportingImages, ...validImageFiles],
+        }));
+
+        if (errors.supportingImages) {
+          setErrors((prev) => {
+            const newErrors = { ...prev };
+            delete newErrors.supportingImages;
+            return newErrors;
+          });
+        }
+      } else {
         setErrors((prev) => ({
           ...prev,
-          supportingImages: "File size must be less than 4MB"
+          supportingImages: "Please upload valid image files",
         }));
-        continue;
       }
-
-      validImageFiles.push(file);
-    }
-    
-    if (validImageFiles.length > 0) {
-      setUploadedImages(prev => [...prev, ...validImageFiles]);
-      setFormData(prev => ({
-        ...prev,
-        supportingImages: [...prev.supportingImages, ...validImageFiles]
-      }));
-      
-      if (errors.supportingImages) {
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.supportingImages;
-          return newErrors;
-        });
-      }
-    } else {
-      setErrors(prev => ({
-        ...prev,
-        supportingImages: "Please upload valid image files"
-      }));
-    }
-  }, [errors]);
+    },
+    [errors]
+  );
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      const imageFiles = files.filter(file => {
+      const imageFiles = files.filter((file) => {
         if (file.size > 4 * 1024 * 1024) {
           setErrors((prev) => ({
             ...prev,
-            supportingImages: "File size must be less than 4MB"
+            supportingImages: "File size must be less than 4MB",
           }));
           return false;
         }
-        return file.type.startsWith('image/');
+        return file.type.startsWith("image/");
       });
-      
+
       if (imageFiles.length > 0) {
-        setUploadedImages(prev => [...prev, ...imageFiles]);
-        setFormData(prev => ({
+        setUploadedImages((prev) => [...prev, ...imageFiles]);
+        setFormData((prev) => ({
           ...prev,
-          supportingImages: [...prev.supportingImages, ...imageFiles]
+          supportingImages: [...prev.supportingImages, ...imageFiles],
         }));
         if (errors.supportingImages) {
           setErrors((prev) => {
@@ -316,10 +310,10 @@ export default function CreateFundraiser() {
   };
 
   const removeImage = (index: number) => {
-    setUploadedImages(prev => prev.filter((_, i) => i !== index));
-    setFormData(prev => ({
+    setUploadedImages((prev) => prev.filter((item, i) => i !== index));
+    setFormData((prev) => ({
       ...prev,
-      supportingImages: prev.supportingImages.filter((_, i) => i !== index)
+      supportingImages: prev.supportingImages.filter((item, i) => i !== index),
     }));
   };
 
@@ -346,15 +340,15 @@ export default function CreateFundraiser() {
       setDateError("End date is required");
       return false;
     }
-    
-    const selectedDateTime = new Date(`${endDate}T${endTime || '23:59'}`);
+
+    const selectedDateTime = new Date(`${endDate}T${endTime || "23:59"}`);
     const now = new Date();
-    
+
     if (selectedDateTime <= now) {
       setDateError("End date and time must be in the future");
       return false;
     }
-    
+
     setDateError("");
     return true;
   };
@@ -366,11 +360,13 @@ export default function CreateFundraiser() {
     try {
       // Convert all images to base64 strings for preview
       const imagePromises = [];
-      
+
       // Convert display image if exists
       let displayImageBase64 = null;
       if (formData.displayImage) {
-        const displayImageBlob = await fetch(formData.displayImage).then(r => r.blob());
+        const displayImageBlob = await fetch(formData.displayImage).then((r) =>
+          r.blob()
+        );
         displayImageBase64 = await convertBlobToBase64(displayImageBlob);
       }
 
@@ -395,19 +391,19 @@ export default function CreateFundraiser() {
         walletAddress: formData.walletAddress || "Preview Address",
         goal: parseFloat(goal),
         minimumDonation: formData.minimumDonation || 1,
-        endDate: `${endDate}T${endTime || '23:59'}`,
+        endDate: `${endDate}T${endTime || "23:59"}`,
       };
 
       // Save to localStorage for preview
-      localStorage.setItem('previewFundraiser', JSON.stringify(previewData));
+      localStorage.setItem("previewFundraiser", JSON.stringify(previewData));
 
       // Navigate to preview page
       router.push(`/fundraiser/preview/${previewData.id}`);
     } catch (error) {
-      console.error('Error creating preview:', error);
-      setErrors(prev => ({
+      console.error("Error creating preview:", error);
+      setErrors((prev) => ({
         ...prev,
-        preview: 'Failed to create preview. Please try again.'
+        preview: "Failed to create preview. Please try again.",
       }));
     }
   };
@@ -426,17 +422,17 @@ export default function CreateFundraiser() {
         category: "Category",
         location: "Location",
         walletAddress: "Wallet address",
-        goal: "Goal amount"
+        goal: "Goal amount",
       };
 
       const missingFields = Object.entries(requiredFields)
         .filter(([key]) => !formData[key as keyof FundraiserFormData])
-        .map(([_, label]) => label);
+        .map(([, label]) => label);
 
       if (missingFields.length > 0) {
-        setErrors(prev => ({
+        setErrors((prev) => ({
           ...prev,
-          submit: `Please fill in required fields: ${missingFields.join(", ")}`
+          submit: `Please fill in required fields: ${missingFields.join(", ")}`,
         }));
         return;
       }
@@ -446,35 +442,41 @@ export default function CreateFundraiser() {
 
       // Convert images to proper format for upload
       if (formData.displayImage) {
-        const displayImageBlob = await fetch(formData.displayImage).then(r => r.blob());
-        formDataToSubmit.append('displayImage', new File([displayImageBlob], 'display.jpg', { type: 'image/jpeg' }));
+        const displayImageBlob = await fetch(formData.displayImage).then((r) =>
+          r.blob()
+        );
+        formDataToSubmit.append(
+          "displayImage",
+          new File([displayImageBlob], "display.jpg", { type: "image/jpeg" })
+        );
       }
 
       // Add supporting images
       for (const file of formData.supportingImages) {
-        formDataToSubmit.append('supportingImages', file);
+        formDataToSubmit.append("supportingImages", file);
       }
 
       // Add other form data
       Object.entries(formData).forEach(([key, value]) => {
-        if (key !== 'displayImage' && key !== 'supportingImages') {
-          formDataToSubmit.append(key, 
-            typeof value === 'string' ? value : JSON.stringify(value)
+        if (key !== "displayImage" && key !== "supportingImages") {
+          formDataToSubmit.append(
+            key,
+            typeof value === "string" ? value : JSON.stringify(value)
           );
         }
       });
 
       formDataToSubmit.append("goal", goal);
-      formDataToSubmit.append("endDate", `${endDate}T${endTime || '23:59'}`);
+      formDataToSubmit.append("endDate", `${endDate}T${endTime || "23:59"}`);
 
       // Submit to API
-      const response = await fetch('/api/fundraisers', {
-        method: 'POST',
+      const response = await fetch("/api/fundraisers", {
+        method: "POST",
         body: formDataToSubmit,
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create fundraiser');
+        throw new Error("Failed to create fundraiser");
       }
 
       const data = await response.json();
@@ -486,24 +488,28 @@ export default function CreateFundraiser() {
         status: "active",
         createdAt: new Date().toISOString(),
         raised: 0,
-        supporters: 0
+        supporters: 0,
       };
 
       // Update localStorage
-      const existingFundraisers = JSON.parse(localStorage.getItem('fundraisers') || '[]');
-      localStorage.setItem('fundraisers', JSON.stringify([fundraiserData, ...existingFundraisers]));
+      const existingFundraisers = JSON.parse(
+        localStorage.getItem("fundraisers") || "[]"
+      );
+      localStorage.setItem(
+        "fundraisers",
+        JSON.stringify([fundraiserData, ...existingFundraisers])
+      );
 
       // Show success message
-      alert('Fundraiser published successfully!');
-      
+      alert("Fundraiser published successfully!");
+
       // Redirect to the new fundraiser page
       router.push(`/fundraiser/${data.id}`);
-
     } catch (error) {
-      console.error('Error publishing fundraiser:', error);
-      setErrors(prev => ({
+      console.error("Error publishing fundraiser:", error);
+      setErrors((prev) => ({
         ...prev,
-        submit: 'Failed to publish fundraiser. Please try again.'
+        submit: "Failed to publish fundraiser. Please try again.",
       }));
     } finally {
       setIsSubmitting(false);
@@ -513,15 +519,15 @@ export default function CreateFundraiser() {
   const handleCancel = () => {
     // Show confirmation dialog
     const confirmed = window.confirm(
-      'Are you sure you want to cancel? All your progress will be lost.'
+      "Are you sure you want to cancel? All your progress will be lost."
     );
-    
+
     if (confirmed) {
       // Clean up any object URLs
       if (formData.displayImage) {
         URL.revokeObjectURL(formData.displayImage);
       }
-      uploadedImages.forEach(file => {
+      uploadedImages.forEach((file) => {
         if (file instanceof File) {
           URL.revokeObjectURL(URL.createObjectURL(file));
         }
@@ -538,21 +544,23 @@ export default function CreateFundraiser() {
         supportingImages: [],
         walletAddress: "",
         goal: 0,
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
         acceptedTokens: ["USD", "ETH", "BTC", "DAI"],
         minimumDonation: 1,
-        blockchain: "Ethereum"
+        blockchain: "Ethereum",
       });
 
       // Clear errors
       setErrors({});
-      
+
       // Reset other states
       setUploadedImages([]);
       setStep(1);
-      
+
       // Navigate back to home
-      router.push('/');
+      router.push("/");
     }
   };
 
@@ -563,14 +571,16 @@ export default function CreateFundraiser() {
 
     return (
       <div className="relative mt-4 rounded-lg overflow-hidden">
-        <img
+        <Image
           src={formData.displayImage}
           alt="Display"
+          width={600}
+          height={192}
           className="w-full h-48 object-cover rounded-lg"
         />
         <button
           onClick={() => {
-            setFormData(prev => ({ ...prev, displayImage: null }));
+            setFormData((prev) => ({ ...prev, displayImage: null }));
             if (formData.displayImage) {
               URL.revokeObjectURL(formData.displayImage);
             }
@@ -598,16 +608,19 @@ export default function CreateFundraiser() {
                 onChange={handleInputChange}
                 name="name"
                 className={`w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white ${
-                  errors.name ? 'border border-red-500' : ''
+                  errors.name ? "border border-red-500" : ""
                 }`}
                 placeholder="Enter your fundraiser name"
               />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+              {errors.name && (
+                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">
-                Tell us about your FUNDRAISE... <span className="text-red-500">*</span>
+                Tell us about your FUNDRAISE...{" "}
+                <span className="text-red-500">*</span>
               </label>
               <div className="bg-[#1B2333] rounded-lg overflow-hidden">
                 <div className="border-b border-gray-700 p-2 flex items-center space-x-2">
@@ -625,12 +638,16 @@ export default function CreateFundraiser() {
                   onChange={handleInputChange}
                   name="description"
                   className={`w-full bg-transparent p-4 min-h-[200px] text-white ${
-                    errors.description ? 'border border-red-500' : ''
+                    errors.description ? "border border-red-500" : ""
                   }`}
                   placeholder="Describe your fundraiser..."
                 />
               </div>
-              {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+              {errors.description && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.description}
+                </p>
+              )}
             </div>
           </div>
         );
@@ -647,18 +664,24 @@ export default function CreateFundraiser() {
                     <input
                       type="url"
                       value={link}
-                      onChange={(e) => handleSocialLinkChange(index, e.target.value)}
+                      onChange={(e) =>
+                        handleSocialLinkChange(index, e.target.value)
+                      }
                       className={`w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white placeholder-gray-400 ${
-                        errors.socialLinks ? 'border border-red-500' : ''
+                        errors.socialLinks ? "border border-red-500" : ""
                       }`}
                       placeholder="Add your social media link"
                     />
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-400 mt-1">Add your project's social media links</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Add your project&apos;s social media links
+              </p>
               {errors.socialLinks && (
-                <p className="text-red-500 text-sm mt-1">{errors.socialLinks}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.socialLinks}
+                </p>
               )}
             </div>
 
@@ -699,7 +722,7 @@ export default function CreateFundraiser() {
                   onChange={handleInputChange}
                   name="otherCategory"
                   className={`mt-2 w-full bg-[#1B2333] rounded-lg px-4 py-2.5 text-white ${
-                    errors.otherCategory ? 'border border-red-500' : ''
+                    errors.otherCategory ? "border border-red-500" : ""
                   }`}
                   placeholder="Specify category"
                 />
@@ -748,7 +771,9 @@ export default function CreateFundraiser() {
               </label>
               <div
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  isDragging ? 'border-[#0066FF] bg-[#1B2333]' : 'border-gray-700'
+                  isDragging
+                    ? "border-[#0066FF] bg-[#1B2333]"
+                    : "border-gray-700"
                 }`}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
@@ -759,7 +784,7 @@ export default function CreateFundraiser() {
                   <Upload className="mx-auto h-12 w-12 text-gray-400" />
                 </div>
                 <p className="text-sm text-gray-400 mb-2">
-                  Drag & drop images here or,{' '}
+                  Drag & drop images here or,{" "}
                   <label className="text-[#0066FF] cursor-pointer hover:underline">
                     browse
                     <input
@@ -780,9 +805,11 @@ export default function CreateFundraiser() {
                 <div className="mt-4 grid grid-cols-3 gap-4">
                   {uploadedImages.map((file, index) => (
                     <div key={index} className="relative group">
-                      <img
+                      <Image
                         src={URL.createObjectURL(file)}
                         alt={`Uploaded ${index + 1}`}
+                        width={300}
+                        height={128}
                         className="w-full h-32 object-cover rounded-lg"
                       />
                       <button
@@ -814,7 +841,9 @@ export default function CreateFundraiser() {
           <div className="space-y-6">
             <div className="bg-gray-900 rounded-xl p-6 space-y-6">
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-white">Fundraising Goal</h2>
+                <h2 className="text-lg font-semibold text-white">
+                  Fundraising Goal
+                </h2>
                 <div className="space-y-2">
                   <Label htmlFor="goal" className="text-gray-300">
                     Goal Amount (in USD)
@@ -841,13 +870,16 @@ export default function CreateFundraiser() {
                     <p className="text-red-500 text-sm">{goalError}</p>
                   )}
                   <p className="text-sm text-gray-400">
-                    Set a realistic goal for your fundraising campaign. You can receive donations even if you don't reach your goal.
+                    Set a realistic goal for your fundraising campaign. You can
+                    receive donations even if you don&apos;t reach your goal.
                   </p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-white">Campaign Duration</h2>
+                <h2 className="text-lg font-semibold text-white">
+                  Campaign Duration
+                </h2>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="endDate" className="text-gray-300">
@@ -862,7 +894,7 @@ export default function CreateFundraiser() {
                         if (dateError) validateDateTime();
                       }}
                       className="bg-gray-800 border-gray-700 text-white"
-                      min={new Date().toISOString().split('T')[0]}
+                      min={new Date().toISOString().split("T")[0]}
                     />
                   </div>
                   <div className="space-y-2">
@@ -885,7 +917,8 @@ export default function CreateFundraiser() {
                   <p className="text-red-500 text-sm">{dateError}</p>
                 )}
                 <p className="text-sm text-gray-400">
-                  Set when your fundraising campaign will end. If no time is specified, it will end at 11:59 PM on the selected date.
+                  Set when your fundraising campaign will end. If no time is
+                  specified, it will end at 11:59 PM on the selected date.
                 </p>
               </div>
             </div>
@@ -935,14 +968,18 @@ export default function CreateFundraiser() {
           {/* Left Section */}
           <div className="col-span-5 bg-[#111827] relative">
             <div className="p-8">
-              <Link href="/" className="inline-flex items-center text-2xl font-bold mb-12">
+              <Link
+                href="/"
+                className="inline-flex items-center text-2xl font-bold mb-12"
+              >
                 <span>FUND</span>
                 <span className="text-[#0066FF]">CHAIN</span>
               </Link>
-              
+
               <div className="relative">
                 <h1 className="text-3xl font-bold mb-4">
-                  Start your <span className="text-[#0066FF]">FUNDRAISE</span> now
+                  Start your <span className="text-[#0066FF]">FUNDRAISE</span>{" "}
+                  now
                 </h1>
                 <div className="mt-8">
                   <div className="w-full h-64 bg-gradient-to-b from-[#1a2436] to-[#111827] rounded-lg flex items-center justify-center">
@@ -989,7 +1026,7 @@ const convertBlobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
+    reader.onerror = (error) => reject(error);
     reader.readAsDataURL(blob);
   });
 };
@@ -998,7 +1035,7 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
+    reader.onerror = (error) => reject(error);
     reader.readAsDataURL(file);
   });
 };

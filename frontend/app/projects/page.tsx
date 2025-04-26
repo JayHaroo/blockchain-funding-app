@@ -1,31 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-
-import {
-  Heart,
-  MessageCircle,
-  Share2,
-  ArrowUpRight,
-  Home,
-  Search,
-  Users,
-  Bookmark,
-  Settings,
-  TrendingUp,
-  Calendar,
-  HelpCircle,
-  Plus,
-  MoreHorizontal,
-  BookOpen,
-  Lightbulb,
-  Target,
-  Coins,
-  Shield,
-  ArrowRight,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { Heart, Share2 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 // Define the fundraiser type
@@ -65,83 +42,18 @@ const CATEGORIES = [
   { id: "arts", name: "Arts" },
 ];
 
-// Educational content data
-const EDUCATIONAL_POSTS = [
-  {
-    id: "p1",
-    title: "Coding Bootcamp Scholarship Fund",
-    description: "Help aspiring developers access quality education",
-    organizer: {
-      name: "Sarah Chen",
-      avatar: "https://ui-avatars.com/api/?name=Sarah+Chen&background=0066FF&color=fff"
-    },
-    goal: 15000,
-    raised: 8750,
-    daysLeft: 15,
-    supporters: 124,
-    category: "Education"
-  },
-  {
-    id: "p2",
-    title: "STEM Education for Rural Schools",
-    description: "Bringing technology and science resources to underserved areas",
-    organizer: {
-      name: "Michael Torres",
-      avatar: "https://ui-avatars.com/api/?name=Michael+Torres&background=00CC88&color=fff"
-    },
-    goal: 25000,
-    raised: 12300,
-    daysLeft: 22,
-    supporters: 198,
-    category: "Education"
-  },
-  {
-    id: "p3",
-    title: "Digital Library Initiative",
-    description: "Creating accessible online learning resources",
-    organizer: {
-      name: "Emma Watson",
-      avatar: "https://ui-avatars.com/api/?name=Emma+Watson&background=FF6B6B&color=fff"
-    },
-    goal: 10000,
-    raised: 7200,
-    daysLeft: 18,
-    supporters: 156,
-    category: "Education"
-  },
-  {
-    id: "p4",
-    title: "Student Mental Health Support",
-    description: "Providing counseling and wellness resources for students",
-    organizer: {
-      name: "David Park",
-      avatar: "https://ui-avatars.com/api/?name=David+Park&background=845EC2&color=fff"
-    },
-    goal: 20000,
-    raised: 15600,
-    daysLeft: 12,
-    supporters: 234,
-    category: "Education"
-  }
-];
-
 export default function ProjectsPage() {
   const router = useRouter();
   const [fundraisers, setFundraisers] = useState<Fundraiser[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
-  const observer = useRef<IntersectionObserver | null>(null);
-  const [activeTab, setActiveTab] = useState("education");
 
   // Handle URL parameters for category
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const categoryParam = params.get('category');
+    const categoryParam = params.get("category");
     if (categoryParam) {
       setActiveCategory(categoryParam);
-      setActiveTab(categoryParam);
     }
   }, []);
 
@@ -149,41 +61,25 @@ export default function ProjectsPage() {
   useEffect(() => {
     const loadProjects = () => {
       try {
-        const projectsData = JSON.parse(localStorage.getItem('projectsData') || '{}');
-        const projects = Object.values(projectsData) as any[];
-        
-        // Convert projects to Fundraiser type
-        const convertedProjects: Fundraiser[] = projects.map(project => ({
-          id: project.id,
-          title: project.title,
-          organizer: project.organizer || "Anonymous",
-          organizerAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(project.organizer || 'Anonymous')}&background=0066FF&color=fff`,
-          description: project.description,
-          category: project.category,
-          goal: project.goal,
-          raised: project.raised || 0,
-          daysLeft: Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)),
-          coverImage: project.image || "/placeholder.svg",
-          isLiked: false,
-          likes: 0,
-          comments: 0,
-          shares: 0,
-          createdAt: project.createdAt,
-          endDate: project.endDate,
-          blockchain: project.blockchain,
-          image: project.displayImage || project.image || "/placeholder.svg",
-          supportingImages: project.supportingImages || []
-        }));
+        const projectsData = JSON.parse(
+          localStorage.getItem("projectsData") || "{}"
+        );
+        const projects = Object.values(projectsData) as Fundraiser[];
 
         // Filter projects by category if not 'all'
-        const filteredProjects = activeCategory === 'all' 
-          ? convertedProjects 
-          : convertedProjects.filter(project => project.category.toLowerCase() === activeCategory.toLowerCase());
+        const filteredProjects =
+          activeCategory === "all"
+            ? projects
+            : projects.filter(
+                (project) =>
+                  project.category.toLowerCase() ===
+                  activeCategory.toLowerCase()
+              );
 
         setFundraisers(filteredProjects);
         setLoading(false);
       } catch (error) {
-        console.error('Error loading projects:', error);
+        console.error("Error loading projects:", error);
         setLoading(false);
       }
     };
@@ -195,143 +91,16 @@ export default function ProjectsPage() {
   // Update category handler
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category);
-    setActiveTab(category);
     // Update URL without page reload
     const url = new URL(window.location.href);
-    url.searchParams.set('category', category);
-    window.history.pushState({}, '', url.toString());
+    url.searchParams.set("category", category);
+    window.history.pushState({}, "", url.toString());
   };
 
   // Handle donate click
   const handleDonateClick = (projectId: string) => {
     router.push(`/donate/${projectId}`);
   };
-
-  // Generate mock fundraiser data
-  const generateMockFundraisers = (pageNum: number) => {
-    const newFundraisers: Fundraiser[] = [];
-    const startIndex = (pageNum - 1) * 5;
-
-    for (let i = 0; i < 5; i++) {
-      const id = `f${startIndex + i + 1}`;
-      // Use deterministic values instead of random
-      const raised = 5000 + ((startIndex + i) * 1000);
-      const goal = raised + 10000;
-
-      const categories = [
-        "Community",
-        "Medical",
-        "Education",
-        "Environment",
-        "Technology",
-        "Arts",
-      ];
-      const titles = [
-        "Community Garden Project",
-        "Medical Support for Children",
-        "Educational Resources for Schools",
-        "Clean Ocean Initiative",
-        "Blockchain Innovation Hub",
-        "Public Art Installation",
-        "Renewable Energy Project",
-        "Wildlife Conservation Effort",
-        "Coding Bootcamp Scholarships",
-        "Mental Health Support Network",
-      ];
-
-      // Use deterministic date based on index
-      const date = new Date();
-      date.setHours(0, 0, 0, 0); // Reset time portion
-      date.setDate(date.getDate() - (startIndex + i));
-
-      newFundraisers.push({
-        id,
-        title: titles[(startIndex + i) % titles.length],
-        organizer: `Organizer ${startIndex + i + 1}`,
-        organizerAvatar: `/placeholder.svg?height=40&width=40&text=${startIndex + i + 1}`,
-        description: "This fundraiser aims to make a positive impact in our community through innovative solutions and collaborative efforts.",
-        category: categories[(startIndex + i) % categories.length],
-        goal,
-        raised,
-        daysLeft: 30 - ((startIndex + i) % 30), // Deterministic days left
-        coverImage: `/placeholder.svg?height=300&width=600&text=Project ${startIndex + i + 1}`,
-        isLiked: false,
-        likes: 100 + ((startIndex + i) * 10), // Deterministic likes
-        comments: 20 + ((startIndex + i) * 2), // Deterministic comments
-        shares: 10 + ((startIndex + i) * 1), // Deterministic shares
-        createdAt: date.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
-        endDate: new Date(date.getTime() + (30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
-        blockchain: {
-          network: "Ethereum",
-          contractAddress: `0x${id}...`
-        },
-        image: `/placeholder.svg?height=300&width=600&text=Project ${startIndex + i + 1}`,
-        supportingImages: [
-          `/placeholder.svg?height=100&width=100&text=Supporting Image ${startIndex + i + 1}-1`,
-          `/placeholder.svg?height=100&width=100&text=Supporting Image ${startIndex + i + 1}-2`,
-          `/placeholder.svg?height=100&width=100&text=Supporting Image ${startIndex + i + 1}-3`
-        ]
-      });
-    }
-
-    return newFundraisers;
-  };
-
-  // Load more fundraisers
-  const loadMoreFundraisers = useCallback(() => {
-    if (loading) return;
-
-    setLoading(true);
-    // Simulate API call delay
-    setTimeout(() => {
-      const nextPage = page + 1;
-      const newFundraisers = generateMockFundraisers(nextPage);
-
-      setFundraisers((prev) => [...prev, ...newFundraisers]);
-      setPage(nextPage);
-      setLoading(false);
-
-      // Stop after 5 pages for demo purposes
-      if (nextPage >= 5) {
-        setHasMore(false);
-      }
-    }, 1000);
-  }, [loading, page]);
-
-  // Set up intersection observer for infinite scroll
-  const lastFundraiserRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (loading) return;
-
-      if (observer.current) observer.current.disconnect();
-
-      observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          loadMoreFundraisers();
-        }
-      });
-
-      if (node) observer.current.observe(node);
-    },
-    [loading, hasMore, loadMoreFundraisers]
-  );
-
-  // Filter fundraisers by category
-  const filteredFundraisers =
-    activeCategory === "all"
-      ? fundraisers
-      : fundraisers.filter(
-          (f) => f.category.toLowerCase() === activeCategory.toLowerCase()
-        );
-
-  // Get trending fundraisers (top 3 by likes)
-  const trendingFundraisers = [...fundraisers]
-    .sort((a, b) => b.likes - a.likes)
-    .slice(0, 3);
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
@@ -348,8 +117,8 @@ export default function ProjectsPage() {
                     onClick={() => handleCategoryChange(category.id)}
                     className={`text-left px-4 py-2.5 rounded-lg ${
                       activeCategory === category.id
-                        ? 'bg-[#0066FF] text-white'
-                        : 'text-gray-400 hover:bg-[#1B2333]'
+                        ? "bg-[#0066FF] text-white"
+                        : "text-gray-400 hover:bg-[#1B2333]"
                     } transition-colors`}
                   >
                     {category.name}
@@ -363,20 +132,25 @@ export default function ProjectsPage() {
           <main className="col-span-8 col-start-3">
             <div className="py-8">
               <h1 className="text-2xl font-semibold text-white mb-2">
-                {activeCategory === 'all' ? 'All Projects' : `${activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)} Projects`}
+                {activeCategory === "all"
+                  ? "All Projects"
+                  : `${
+                      activeCategory.charAt(0).toUpperCase() +
+                      activeCategory.slice(1)
+                    } Projects`}
               </h1>
               <p className="text-gray-400">
-                {activeCategory === 'education' 
-                  ? 'Support educational initiatives and help create opportunities for learning'
-                  : activeCategory === 'medical'
-                  ? 'Support medical causes and help improve healthcare access'
-                  : activeCategory === 'environment'
-                  ? 'Support environmental initiatives and help protect our planet'
-                  : activeCategory === 'technology'
-                  ? 'Support technology innovation and development'
-                  : activeCategory === 'community'
-                  ? 'Support community projects and local initiatives'
-                  : 'Browse and support various fundraising projects'}
+                {activeCategory === "education"
+                  ? "Support educational initiatives and help create opportunities for learning"
+                  : activeCategory === "medical"
+                  ? "Support medical causes and help improve healthcare access"
+                  : activeCategory === "environment"
+                  ? "Support environmental initiatives and help protect our planet"
+                  : activeCategory === "technology"
+                  ? "Support technology innovation and development"
+                  : activeCategory === "community"
+                  ? "Support community projects and local initiatives"
+                  : "Browse and support various fundraising projects"}
               </p>
 
               <div className="space-y-4 mt-8">
@@ -416,21 +190,23 @@ export default function ProjectsPage() {
                   </div>
                 ) : fundraisers.length > 0 ? (
                   fundraisers.map((post) => (
-                    <div 
-                      key={post.id} 
+                    <div
+                      key={post.id}
                       className="bg-[#111827] rounded-xl overflow-hidden hover:bg-[#1B2333] transition-colors"
                     >
                       <div className="p-6">
                         {post.image && (
                           <div className="mb-6 rounded-lg overflow-hidden">
-                            <img
+                            <Image
                               src={post.image}
                               alt={post.title}
+                              width={600}
+                              height={300}
                               className="w-full h-[300px] object-cover"
                             />
                           </div>
                         )}
-                        
+
                         <div className="flex items-start space-x-4 mb-6">
                           <div className="flex-shrink-0">
                             <div className="w-10 h-10 rounded-full bg-[#0066FF] flex items-center justify-center text-lg font-semibold text-white">
@@ -438,47 +214,64 @@ export default function ProjectsPage() {
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-medium text-white mb-1">{post.title}</h3>
-                            <p className="text-sm text-gray-400 mb-3">by {post.organizer}</p>
+                            <h3 className="text-lg font-medium text-white mb-1">
+                              {post.title}
+                            </h3>
+                            <p className="text-sm text-gray-400 mb-3">
+                              by {post.organizer}
+                            </p>
                             <p className="text-gray-300">{post.description}</p>
                           </div>
                         </div>
 
-                        {post.supportingImages && post.supportingImages.length > 0 && (
-                          <div className="grid grid-cols-3 gap-4 mb-6">
-                            {post.supportingImages.map((img, index) => (
-                              <div key={index} className="rounded-lg overflow-hidden">
-                                <img
-                                  src={img}
-                                  alt={`Supporting image ${index + 1}`}
-                                  className="w-full h-[100px] object-cover"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        {post.supportingImages &&
+                          post.supportingImages.length > 0 && (
+                            <div className="grid grid-cols-3 gap-4 mb-6">
+                              {post.supportingImages.map((img, index) => (
+                                <div
+                                  key={index}
+                                  className="rounded-lg overflow-hidden"
+                                >
+                                  <Image
+                                    src={img}
+                                    alt={`Supporting image ${index + 1}`}
+                                    width={200}
+                                    height={100}
+                                    className="w-full h-[100px] object-cover"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
 
                         <div className="bg-[#0A0A0A] rounded-lg p-4 mb-6">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm text-gray-400">Raised</span>
+                            <span className="text-sm text-gray-400">
+                              Raised
+                            </span>
                             <div className="text-right">
                               <span className="text-white font-medium">
                                 ${post.raised.toLocaleString()}
                               </span>
                               <span className="text-gray-400">
-                                {" "}of ${post.goal.toLocaleString()}
+                                {" "}
+                                of ${post.goal.toLocaleString()}
                               </span>
                             </div>
                           </div>
                           <div className="w-full bg-gray-800 rounded-full h-1.5 mb-2">
                             <div
                               className="bg-[#0066FF] h-1.5 rounded-full transition-all duration-500"
-                              style={{ width: `${(post.raised / post.goal) * 100}%` }}
+                              style={{
+                                width: `${(post.raised / post.goal) * 100}%`,
+                              }}
                             />
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-400">0 supporters</span>
-                            <span className="text-gray-400">{post.daysLeft} days left</span>
+                            <span className="text-gray-400">
+                              {post.daysLeft} days left
+                            </span>
                           </div>
                         </div>
 
@@ -501,7 +294,9 @@ export default function ProjectsPage() {
                   ))
                 ) : (
                   <div className="text-center py-8">
-                    <p className="text-gray-400">No projects found in this category</p>
+                    <p className="text-gray-400">
+                      No projects found in this category
+                    </p>
                   </div>
                 )}
               </div>

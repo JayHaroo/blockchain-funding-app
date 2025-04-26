@@ -7,6 +7,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { Pencil, MapPin, LinkIcon } from "lucide-react";
 
+interface Project {
+  organizer: string;
+  organizerAvatar: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
+interface Fundraiser {
+  organizer: string;
+  organizerAvatar: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
 // Update the component to include profile picture upload functionality
 export default function ProfilePage() {
   const router = useRouter();
@@ -123,14 +135,14 @@ export default function ProfilePage() {
           // Update all fundraisers with the new profile picture
           try {
             const projectsData = JSON.parse(localStorage.getItem('projectsData') || '{}');
-            const updatedProjects = Object.entries(projectsData).reduce((acc: any, [key, project]: [string, any]) => {
-              if (project.organizer === user.name) {
+            const updatedProjects = Object.entries(projectsData).reduce<Record<string, Project>>((acc, [key, project]) => {
+              if ((project as Project).organizer === user.name) {
                 acc[key] = {
-                  ...project,
+                  ...project as Project,
                   organizerAvatar: newProfilePic
                 };
               } else {
-                acc[key] = project;
+                acc[key] = project as Project;
               }
               return acc;
             }, {});
@@ -138,7 +150,7 @@ export default function ProfilePage() {
 
             // Update fundraisers list if exists
             const fundraisers = JSON.parse(localStorage.getItem('fundraisers') || '[]');
-            const updatedFundraisers = fundraisers.map((fundraiser: any) => {
+            const updatedFundraisers = fundraisers.map((fundraiser: Fundraiser) => {
               if (fundraiser.organizer === user.name) {
                 return {
                   ...fundraiser,
@@ -169,13 +181,6 @@ export default function ProfilePage() {
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const formatDate = () => {
-    const date = new Date();
-    return `${date.toLocaleString("default", {
-      month: "short",
-    })} ${date.getDate()}, ${date.getFullYear()}`;
   };
 
   return (

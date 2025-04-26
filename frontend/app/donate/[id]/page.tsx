@@ -32,7 +32,13 @@ type ProjectData = {
   };
 };
 
-export default function DonatePage({ params }: { params: { id: string } }) {
+type PageProps = {
+  params: {
+    id: string;
+  };
+};
+
+export default function DonatePage({ params }: PageProps) {
   const router = useRouter();
   const projectId = params.id;
 
@@ -41,7 +47,6 @@ export default function DonatePage({ params }: { params: { id: string } }) {
   const [selectedToken, setSelectedToken] = useState("");
   const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [transactionHash, setTransactionHash] = useState<string | null>(null);
   const [projectData, setProjectData] = useState<ProjectData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentNetwork, setCurrentNetwork] = useState<string>("ethereum");
@@ -189,7 +194,6 @@ export default function DonatePage({ params }: { params: { id: string } }) {
 
       // Simulate blockchain transaction
       const hash = await mockBlockchainTransaction();
-      setTransactionHash(hash);
 
       // Update project status
       const amountNum = Number(amount);

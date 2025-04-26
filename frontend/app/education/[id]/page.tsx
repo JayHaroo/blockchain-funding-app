@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft, Clock, Share2, Bookmark, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+interface Section {
+  type: string;
+  content?: string;
+  items?: string[];
+}
 
 // Mock post content (in a real app, this would come from a database)
 const POST_CONTENT = {
@@ -162,14 +168,16 @@ export default function EducationalPost({ params }: { params: { id: string } }) 
                   );
                 case "list":
                   return (
-                    <ul key={index} className="space-y-2 mb-6">
-                      {section.items.map((item, itemIndex) => (
-                        <li key={itemIndex} className="flex items-start text-gray-300">
-                          <CheckCircle className="h-5 w-5 text-blue-500 mr-2 mt-1 flex-shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    Array.isArray((section as Section).items) && (section.items !== undefined) ? (
+                      <ul key={index} className="space-y-2 mb-6">
+                        {section.items.map((item: string, itemIndex: number) => (
+                          <li key={itemIndex} className="flex items-start text-gray-300">
+                            <CheckCircle className="h-5 w-5 text-blue-500 mr-2 mt-1 flex-shrink-0" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null
                   );
                 default:
                   return null;

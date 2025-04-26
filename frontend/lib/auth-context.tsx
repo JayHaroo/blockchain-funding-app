@@ -77,10 +77,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (!foundUser) throw new Error("Invalid email or password");
 
-      // Fix: Use rest operator without naming the excluded property
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password: _, ...userWithoutPassword } = foundUser;
 
-      // Optional: check if avatar is valid
       if (
         userWithoutPassword.avatar &&
         !isValidImagePath(userWithoutPassword.avatar)
@@ -125,7 +124,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       localStorage.setItem("users", JSON.stringify([...users, newUser]));
 
-      // Fix: Use rest operator without naming the excluded property
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password: _, ...userWithoutPassword } = newUser;
 
       localStorage.setItem("user", JSON.stringify(userWithoutPassword));
@@ -153,11 +152,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       const updatedUser = { ...user, ...updates, avatar };
 
-      // Update user in state and localStorage
       setUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      // Update users list
       const users = JSON.parse(
         localStorage.getItem("users") || "[]"
       ) as UserWithPassword[];
@@ -166,19 +163,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       );
       localStorage.setItem("users", JSON.stringify(updatedUsers));
 
-      // Update user data in userData
       const userData = JSON.parse(localStorage.getItem('userData') || '{}');
       userData.avatar = avatar;
       localStorage.setItem('userData', JSON.stringify(userData));
 
-      // Update all fundraisers with the new profile picture
       try {
-        // Update projects data
         const projectsData = JSON.parse(localStorage.getItem('projectsData') || '{}');
-        const updatedProjects = Object.entries(projectsData).reduce((acc: any, [key, project]: [string, any]) => {
-          if (project.organizer === user.name) {
+        const updatedProjects = Object.entries(projectsData).reduce<Record<string, unknown>>((acc, [key, project]) => {
+          const typedProject = project as { organizer: string; organizerAvatar: string };
+          if (typedProject.organizer === user.name) {
             acc[key] = {
-              ...project,
+              ...typedProject,
               organizerAvatar: avatar
             };
           } else {
@@ -188,9 +183,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }, {});
         localStorage.setItem('projectsData', JSON.stringify(updatedProjects));
 
-        // Update fundraisers list
         const fundraisers = JSON.parse(localStorage.getItem('fundraisers') || '[]');
-        const updatedFundraisers = fundraisers.map((fundraiser: any) => {
+        const updatedFundraisers = fundraisers.map((fundraiser: { organizer: string; organizerAvatar: string }) => {
           if (fundraiser.organizer === user.name) {
             return {
               ...fundraiser,

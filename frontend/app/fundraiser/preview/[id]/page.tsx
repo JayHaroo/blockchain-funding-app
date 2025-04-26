@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Heart, Share2, Calendar, MapPin, Target, X } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, X } from "lucide-react";
 import { use } from 'react';
+import Image from "next/image";
 
 interface PreviewFundraiser {
   id: string;
@@ -69,9 +70,11 @@ export default function PreviewPage({ params }: PreviewPageProps) {
         >
           <X className="h-6 w-6" />
         </button>
-        <img
+        <Image
           src={src}
           alt="Full size"
+          width={1200}
+          height={900}
           className="max-w-full max-h-[90vh] object-contain"
         />
       </div>
@@ -215,9 +218,11 @@ export default function PreviewPage({ params }: PreviewPageProps) {
                 className="rounded-xl overflow-hidden cursor-pointer"
                 onClick={() => setSelectedImage(fundraiser.displayImage)}
               >
-                <img
+                <Image
                   src={fundraiser.displayImage}
                   alt={fundraiser.name}
+                  width={1200}
+                  height={400}
                   className="w-full h-[400px] object-cover hover:opacity-90 transition-opacity"
                 />
               </div>
@@ -248,9 +253,11 @@ export default function PreviewPage({ params }: PreviewPageProps) {
                     className="rounded-lg overflow-hidden cursor-pointer"
                     onClick={() => setSelectedImage(image)}
                   >
-                    <img
+                    <Image
                       src={image}
                       alt={`Supporting ${index + 1}`}
+                      width={600}
+                      height={192}
                       className="w-full h-48 object-cover hover:opacity-90 transition-opacity"
                     />
                   </div>

@@ -16,23 +16,37 @@ export default function SignInPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  const SERVER_URL = "http://localhost:3001/api/login";
 
+  const handleSignIn = async () => {
     if (!email || !password) {
-      setError("Please fill in all fields");
+      setError("All fields are required");
       return;
     }
 
-    const success = await signIn(email, password);
+    try {
+      const response = await fetch(SERVER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (success) {
-      router.push("/projects");
-    } else {
-      setError("Invalid email or password");
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.message || "Invalid credentials");
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Login success:", data);
+      window.alert("Login success: You have successfully logged in");
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("Could not connect to the server");
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-[#18191A] flex flex-col items-center justify-center p-4">
@@ -63,7 +77,7 @@ export default function SignInPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-2">
               <label
                 htmlFor="email"

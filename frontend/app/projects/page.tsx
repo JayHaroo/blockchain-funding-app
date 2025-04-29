@@ -132,12 +132,12 @@ export default function ProjectsPage() {
           <main className="col-span-8 col-start-3">
             <div className="py-8">
               <h1 className="text-2xl font-semibold text-white mb-2">
-                {activeCategory === "all"
+                {/* {activeCategory === "all"
                   ? "All Projects"
                   : `${
                       activeCategory.charAt(0).toUpperCase() +
                       activeCategory.slice(1)
-                    } Projects`}
+                    } Projects`} */}
               </h1>
               <p className="text-gray-400">
                 {activeCategory === "education"
@@ -210,7 +210,7 @@ export default function ProjectsPage() {
                         <div className="flex items-start space-x-4 mb-6">
                           <div className="flex-shrink-0">
                             <div className="w-10 h-10 rounded-full bg-[#0066FF] flex items-center justify-center text-lg font-semibold text-white">
-                              {post.organizer.charAt(0)}
+                              {/* {post.organizer.charAt(0)} */}
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">

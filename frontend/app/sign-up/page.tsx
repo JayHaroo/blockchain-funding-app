@@ -18,12 +18,13 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
 
+  const SERVER_URL = 'http://localhost:3001/api/register';
+
+
+  const handleSignUp = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      setError("Please fill in all fields");
+      setError("All fields are required");
       return;
     }
 
@@ -31,20 +32,30 @@ export default function SignUpPage() {
       setError("Passwords do not match");
       return;
     }
+    try {
+      const response = await fetch(SERVER_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        window.alert(`Register Failed: ${errorData.message || 'Invalid credentials'}`);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Register success:', data);
+      window.alert('Register success: You have successfully registered');
+    } catch (error) {
+      console.error('Register error:', error);
+      window.alert('Error: Could not connect to the server');
     }
 
-    const success = await signUp(email, password, name);
-
-    if (success) {
-      router.push("/projects");
-    } else {
-      setError("Failed to create account. Email may already be in use.");
-    }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-[#18191A] flex flex-col items-center justify-center p-4">
@@ -75,7 +86,7 @@ export default function SignUpPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSignUp} className="space-y-4">
             <div className="space-y-2">
               <label
                 htmlFor="name"

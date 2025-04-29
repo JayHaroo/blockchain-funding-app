@@ -3,17 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronLeft, Clock, Share2, Bookmark, CheckCircle } from "lucide-react";
+import {
+  ChevronLeft,
+  Clock,
+  Share2,
+  Bookmark,
+  CheckCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useParams } from "next/navigation";
 
 interface Section {
   type: string;
   content?: string;
   items?: string[];
-}
-
-interface Props {
-  params: { id: string };
 }
 
 // Mock post content (in a real app, this would come from a database)
@@ -26,7 +29,8 @@ const POST_CONTENT = {
     content: [
       {
         type: "paragraph",
-        content: "Blockchain technology is a revolutionary system that enables secure, transparent, and decentralized record-keeping of transactions. At its core, a blockchain is a distributed database that maintains a continuously growing list of records, called blocks, which are linked and secured using cryptography.",
+        content:
+          "Blockchain technology is a revolutionary system that enables secure, transparent, and decentralized record-keeping of transactions. At its core, a blockchain is a distributed database that maintains a continuously growing list of records, called blocks, which are linked and secured using cryptography.",
       },
       {
         type: "heading",
@@ -43,7 +47,8 @@ const POST_CONTENT = {
       },
       {
         type: "paragraph",
-        content: "In the context of donations, blockchain technology provides unprecedented transparency and accountability. Donors can track exactly how their contributions are used, while organizations can demonstrate their impact with verifiable data.",
+        content:
+          "In the context of donations, blockchain technology provides unprecedented transparency and accountability. Donors can track exactly how their contributions are used, while organizations can demonstrate their impact with verifiable data.",
       },
       {
         type: "heading",
@@ -60,7 +65,8 @@ const POST_CONTENT = {
       },
       {
         type: "paragraph",
-        content: "Understanding blockchain technology is crucial for modern philanthropic efforts. It enables new forms of giving that are more efficient, transparent, and impactful than ever before.",
+        content:
+          "Understanding blockchain technology is crucial for modern philanthropic efforts. It enables new forms of giving that are more efficient, transparent, and impactful than ever before.",
       },
     ],
     relatedPosts: [2, 5, 6],
@@ -68,7 +74,8 @@ const POST_CONTENT = {
   // Add more posts as needed
 };
 
-export default function EducationalPost({ params }: Props) {
+export default function EducationalPost() {
+  const params = useParams<{ id: string }>();
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
   const postId = params.id;
@@ -97,7 +104,10 @@ export default function EducationalPost({ params }: Props) {
     <div className="min-h-screen bg-black">
       <div className="container mx-auto px-4 py-8">
         {/* Navigation */}
-        <Link href="/education" className="inline-flex items-center text-gray-400 hover:text-white mb-8">
+        <Link
+          href="/education"
+          className="inline-flex items-center text-gray-400 hover:text-white mb-8"
+        >
           <ChevronLeft className="h-5 w-5 mr-2" />
           Back to Education Hub
         </Link>
@@ -143,7 +153,11 @@ export default function EducationalPost({ params }: Props) {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsBookmarked(!isBookmarked)}
-                className={isBookmarked ? "text-blue-500" : "text-gray-400 hover:text-white"}
+                className={
+                  isBookmarked
+                    ? "text-blue-500"
+                    : "text-gray-400 hover:text-white"
+                }
               >
                 <Bookmark className="h-5 w-5" />
               </Button>
@@ -166,23 +180,28 @@ export default function EducationalPost({ params }: Props) {
                   );
                 case "heading":
                   return (
-                    <h2 key={index} className="text-2xl font-bold text-white mt-8 mb-4">
+                    <h2
+                      key={index}
+                      className="text-2xl font-bold text-white mt-8 mb-4"
+                    >
                       {section.content}
                     </h2>
                   );
                 case "list":
-                  return (
-                    Array.isArray((section as Section).items) && (section.items !== undefined) ? (
-                      <ul key={index} className="space-y-2 mb-6">
-                        {section.items.map((item: string, itemIndex: number) => (
-                          <li key={itemIndex} className="flex items-start text-gray-300">
-                            <CheckCircle className="h-5 w-5 text-blue-500 mr-2 mt-1 flex-shrink-0" />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null
-                  );
+                  return Array.isArray((section as Section).items) &&
+                    section.items !== undefined ? (
+                    <ul key={index} className="space-y-2 mb-6">
+                      {section.items.map((item: string, itemIndex: number) => (
+                        <li
+                          key={itemIndex}
+                          className="flex items-start text-gray-300"
+                        >
+                          <CheckCircle className="h-5 w-5 text-blue-500 mr-2 mt-1 flex-shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null;
                 default:
                   return null;
               }
@@ -192,4 +211,4 @@ export default function EducationalPost({ params }: Props) {
       </div>
     </div>
   );
-} 
+}

@@ -96,55 +96,6 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
-          {user ? (
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors hover:bg-[#3A3B3C]">
-                    <div className="relative h-9 w-9 overflow-hidden rounded-full border border-[#3A3B3C]">
-                      <Image
-                        src={
-                          user.avatar ||
-                          `/placeholder.svg?height=40&width=40&text=${
-                            user.name.charAt(0) || "/placeholder.svg"
-                          }`
-                        }
-                        alt={user.name || "User"}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-white">
-                      {user.name?.split(" ")[0] || "User"}
-                    </span>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-56 bg-[#242526] backdrop-blur-md border border-[#3A3B3C] text-white rounded-xl overflow-hidden shadow-xl"
-                >
-                  <DropdownMenuItem className="py-3 px-4 hover:bg-[#3A3B3C] cursor-pointer transition-colors duration-200 focus:bg-[#3A3B3C]">
-                    <Link
-                      href="/profile"
-                      className="w-full flex items-center gap-2"
-                    >
-                      <User className="h-4 w-4 text-blue-400" />
-                      <span>My Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="py-3 px-4 hover:bg-[#3A3B3C] cursor-pointer transition-colors duration-200 focus:bg-[#3A3B3C]"
-                    onClick={handleSignOut}
-                  >
-                    <div className="w-full flex items-center gap-2 text-red-400">
-                      <LogOut className="h-4 w-4" />
-                      <span>Sign Out</span>
-                    </div>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          ) : (
             <div className="flex items-center gap-2">
               <Link href="/sign-in">
                 <Button
@@ -160,8 +111,7 @@ export function Navbar() {
                 </Button>
               </Link>
             </div>
-          )}
-
+            
           {/* Connect Wallet Button */}
           <div className="ml-4">
             <div className="bg-transparent text-white hover:bg-[#3A3B3C] focus:ring-2 focus:ring-blue-500 rounded-full">

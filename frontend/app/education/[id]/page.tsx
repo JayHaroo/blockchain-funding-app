@@ -12,6 +12,10 @@ interface Section {
   items?: string[];
 }
 
+interface Props {
+  params: { id: string };
+}
+
 // Mock post content (in a real app, this would come from a database)
 const POST_CONTENT = {
   "1": {
@@ -64,7 +68,7 @@ const POST_CONTENT = {
   // Add more posts as needed
 };
 
-export default function EducationalPost({ params }: { params: { id: string } }) {
+export default function EducationalPost({ params }: Props) {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [showShareTooltip, setShowShareTooltip] = useState(false);
   const postId = params.id;

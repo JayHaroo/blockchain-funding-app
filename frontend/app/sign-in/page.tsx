@@ -18,12 +18,14 @@ export default function SignInPage() {
 
   const SERVER_URL = "http://localhost:3001/api/login";
 
-  const handleSignIn = async () => {
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+  
     if (!email || !password) {
       setError("All fields are required");
       return;
     }
-
+  
     try {
       const response = await fetch(SERVER_URL, {
         method: "POST",
@@ -32,21 +34,26 @@ export default function SignInPage() {
         },
         body: JSON.stringify({ email, password }),
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         setError(errorData.message || "Invalid credentials");
         return;
       }
-
+  
       const data = await response.json();
+  
+      // 👇 Use signIn from context with received user/token info
+      await signIn(email, password); // Pass email and password as separate arguments
+  
       console.log("Login success:", data);
-      window.alert("Login success: You have successfully logged in");
+      router.push("/"); // Redirect to protected page
     } catch (error) {
       console.error("Login error:", error);
       setError("Could not connect to the server");
     }
-  }
+  };
+  
 
   return (
     <div className="min-h-screen bg-[#18191A] flex flex-col items-center justify-center p-4">

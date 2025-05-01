@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 
-// Rich text editor icons and components
+const SERVER_URL = "http://localhost:3001/createPost"; 
+
 const EditorIcons = {
   H1: () => <span className="font-bold">H1</span>,
   H2: () => <span className="font-bold">H2</span>,

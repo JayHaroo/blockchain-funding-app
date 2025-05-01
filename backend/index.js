@@ -12,13 +12,14 @@ app.use(express.json());
 
 const client = new MongoClient(process.env.MONGODB_URI)
 
-let userCollection;
+let userCollection, postCollection;
 
 async function connectDB() {
   try {
     await client.connect();
     const database = client.db('fundchain');
     userCollection = database.collection('users');
+    postCollection = database.collection('posts');
     console.log('✅ Connected to MongoDB');
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
@@ -59,6 +60,19 @@ app.post('/api/login', async (req, res) => {
     res.status(200).json({ message: 'Login successful', userId: user._id });
   } catch (error) {
     console.error('Error logging in user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+);
+
+app.post('/createPost', async (req, res) => {
+  const { title, content, userId } = req.body;
+  try {
+    const newPost = { title, content, userId };
+    const result = await userCollection.insertOne(newPost);
+    res.status(201).json({ message: 'Post created successfully', postId: result.insertedId });
+  } catch (error) {
+    console.error('Error creating post:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 }

@@ -10,6 +10,8 @@ import { ArrowLeft, Upload, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
+import { title } from "process";
+import { form } from "viem/chains";
 
 const SERVER_URL = "http://localhost:3001/createPost"; 
 
@@ -413,108 +415,7 @@ export default function CreateFundraiser() {
     if (!validateGoal(goal) || !validateDateTime()) {
       return;
     }
-    try {
-      setIsSubmitting(true);
-
-      // Validate required fields
-      const requiredFields = {
-        name: "Fundraiser name",
-        description: "Description",
-        category: "Category",
-        location: "Location",
-        walletAddress: "Wallet address",
-        goal: "Goal amount",
-      };
-
-      const missingFields = Object.entries(requiredFields)
-        .filter(([key]) => !formData[key as keyof FundraiserFormData])
-        .map(([, label]) => label);
-
-      if (missingFields.length > 0) {
-        setErrors((prev) => ({
-          ...prev,
-          submit: `Please fill in required fields: ${missingFields.join(", ")}`,
-        }));
-        return;
-      }
-
-      // Create FormData for file uploads
-      const formDataToSubmit = new FormData();
-
-      // Convert images to proper format for upload
-      if (formData.displayImage) {
-        const displayImageBlob = await fetch(formData.displayImage).then((r) =>
-          r.blob()
-        );
-        formDataToSubmit.append(
-          "displayImage",
-          new File([displayImageBlob], "display.jpg", { type: "image/jpeg" })
-        );
-      }
-
-      // Add supporting images
-      for (const file of formData.supportingImages) {
-        formDataToSubmit.append("supportingImages", file);
-      }
-
-      // Add other form data
-      Object.entries(formData).forEach(([key, value]) => {
-        if (key !== "displayImage" && key !== "supportingImages") {
-          formDataToSubmit.append(
-            key,
-            typeof value === "string" ? value : JSON.stringify(value)
-          );
-        }
-      });
-
-      formDataToSubmit.append("goal", goal);
-      formDataToSubmit.append("endDate", `${endDate}T${endTime || "23:59"}`);
-
-      // Submit to API
-      const response = await fetch("/api/fundraisers", {
-        method: "POST",
-        body: formDataToSubmit,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create fundraiser");
-      }
-
-      const data = await response.json();
-
-      // Save to localStorage for immediate access
-      const fundraiserData = {
-        ...formData,
-        id: data.id,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        raised: 0,
-        supporters: 0,
-      };
-
-      // Update localStorage
-      const existingFundraisers = JSON.parse(
-        localStorage.getItem("fundraisers") || "[]"
-      );
-      localStorage.setItem(
-        "fundraisers",
-        JSON.stringify([fundraiserData, ...existingFundraisers])
-      );
-
-      // Show success message
-      alert("Fundraiser published successfully!");
-
-      // Redirect to the new fundraiser page
-      router.push(`/fundraiser/${data.id}`);
-    } catch (error) {
-      console.error("Error publishing fundraiser:", error);
-      setErrors((prev) => ({
-        ...prev,
-        submit: "Failed to publish fundraiser. Please try again.",
-      }));
-    } finally {
-      setIsSubmitting(false);
-    }
+    handleCreatePost();
   };
 
   const handleCancel = () => {
@@ -959,6 +860,54 @@ export default function CreateFundraiser() {
         );
       default:
         return null;
+    }
+  };
+
+  const handleCreatePost = async () => {
+    if (!validateGoal(goal) || !validateDateTime()) {
+      return;
+    }
+    if (!formData.name || !formData.description) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: "Please fill in required fields",
+      }));
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(SERVER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: formData.name,
+          description: formData.description,
+          userId: formData.walletAddress,
+          category: formData.category,
+          location: formData.location,
+          goal: formData.goal,
+          deadline: formData.endDate
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create fundraiser");
+      }
+
+      const data = await response.json();
+      alert("Fundraiser created successfully!");
+    }
+    catch (error) {
+      console.error("Error creating fundraiser:", error);
+      setErrors((prev) => ({
+        ...prev,
+        submit: "Failed to create fundraiser. Please try again.",
+      }));
+    }
+    finally {
+      setIsSubmitting(false);
     }
   };
 

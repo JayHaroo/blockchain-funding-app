@@ -66,13 +66,24 @@ app.post('/api/login', async (req, res) => {
 );
 
 app.post('/createPost', async (req, res) => {
-  const { title, content, userId } = req.body;
+  const { title, content, userId, category, location, goal, deadline } = req.body;
   try {
-    const newPost = { title, content, userId };
-    const result = await userCollection.insertOne(newPost);
+    const newPost = {  title, content, userId, category, location, goal, deadline };
+    const result = await postCollection.insertOne(newPost);
     res.status(201).json({ message: 'Post created successfully', postId: result.insertedId });
   } catch (error) {
     console.error('Error creating post:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+);
+
+app.get('/posts', async (req, res) => {
+  try {
+    const posts = await postCollection.find().toArray();
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 }

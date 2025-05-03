@@ -10,10 +10,10 @@ import { ArrowLeft, Upload, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
-import { title } from "process";
-import { form } from "viem/chains";
+import { getAccount } from '@wagmi/core'
+import { config } from './config'
 
-const SERVER_URL = "http://localhost:3001/createPost"; 
+const SERVER_URL = "http://localhost:3001/createPost";
 
 const EditorIcons = {
   H1: () => <span className="font-bold">H1</span>,
@@ -71,6 +71,11 @@ const CATEGORIES = [
 ];
 
 export default function CreateFundraiser() {
+  const account = getAccount(config)
+  const [walletAddress, setWalletAddress] = useState("");
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [error, setError] = useState("");
+
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FundraiserFormData>({
@@ -80,7 +85,7 @@ export default function CreateFundraiser() {
     category: "",
     location: "",
     supportingImages: [],
-    walletAddress: "",
+    walletAddress: account.address || "",
     goal: 0,
     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       .toISOString()
@@ -864,9 +869,17 @@ export default function CreateFundraiser() {
   };
 
   const handleCreatePost = async () => {
+    if (!formData.walletAddress) {
+      setErrors((prev) => ({
+        ...prev,
+        walletAddress: "Please connect your wallet",
+      }));
+      return;
+    }
     if (!validateGoal(goal) || !validateDateTime()) {
       return;
     }
+
     if (!formData.name || !formData.description) {
       setErrors((prev) => ({
         ...prev,
@@ -883,12 +896,12 @@ export default function CreateFundraiser() {
         },
         body: JSON.stringify({
           title: formData.name,
-          description: formData.description,
+          content: formData.description,
           userId: formData.walletAddress,
           category: formData.category,
           location: formData.location,
           goal: formData.goal,
-          deadline: formData.endDate
+          deadline: formData.endDate,
         }),
       });
 
@@ -898,18 +911,24 @@ export default function CreateFundraiser() {
 
       const data = await response.json();
       alert("Fundraiser created successfully!");
-    }
-    catch (error) {
+    } catch (error) {
       console.error("Error creating fundraiser:", error);
       setErrors((prev) => ({
         ...prev,
         submit: "Failed to create fundraiser. Please try again.",
       }));
-    }
-    finally {
+    } finally {
       setIsSubmitting(false);
     }
   };
+
+  const checkWalletAddress = () => {
+    console.log(formData.walletAddress);
+    if (!formData.walletAddress) {
+      setError("Please connect your wallet");
+      return;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white">

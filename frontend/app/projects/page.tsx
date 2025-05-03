@@ -39,7 +39,7 @@ export default function ProjectsPage() {
           id: post._id || "unknown",
           title: post.title || "Untitled",
           organizer: post.userId || "Anonymous",
-          description: post.content || "No description provided.",
+          description: post.content || post.description || "No description available",
           goal: post.goal || 0,
           raised: post.raised || 0,
           daysLeft: post.deadline

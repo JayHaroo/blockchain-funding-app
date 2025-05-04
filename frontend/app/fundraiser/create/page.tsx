@@ -905,7 +905,7 @@ export default function CreateFundraiser() {
           userId: address,
           category: formData.category,
           location: formData.location,
-          goal: formData.goal,
+          goal: goal,
           deadline: formData.endDate,
         }),
       });

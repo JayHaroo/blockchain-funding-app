@@ -10,8 +10,13 @@ import { ArrowLeft, Upload, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
-import { getAccount } from '@wagmi/core'
-import { config } from './config'
+import {
+  useAccount,
+  useConnect,
+  useDisconnect,
+  useEnsAvatar,
+  useEnsName,
+} from 'wagmi'
 
 const SERVER_URL = "http://localhost:3001/createPost";
 
@@ -71,10 +76,17 @@ const CATEGORIES = [
 ];
 
 export default function CreateFundraiser() {
-  const account = getAccount(config)
-  const [walletAddress, setWalletAddress] = useState("");
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const { address, connector, isConnected } = useAccount()
+  const { data: ensName } = useEnsName({ address })
+  const { data: ensAvatar } = useEnsAvatar({ name: ensName })
+  const { connect, connectors, isLoading, pendingConnector } =
+    useConnect()
+  const { disconnect } = useDisconnect()
   const [error, setError] = useState("");
+
+  if (isConnected) {
+    console.log("Connected to wallet:", address);
+  }
 
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -85,7 +97,7 @@ export default function CreateFundraiser() {
     category: "",
     location: "",
     supportingImages: [],
-    walletAddress: account.address || "",
+    walletAddress: address || "",
     goal: 0,
     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       .toISOString()
@@ -869,13 +881,6 @@ export default function CreateFundraiser() {
   };
 
   const handleCreatePost = async () => {
-    if (!formData.walletAddress) {
-      setErrors((prev) => ({
-        ...prev,
-        walletAddress: "Please connect your wallet",
-      }));
-      return;
-    }
     if (!validateGoal(goal) || !validateDateTime()) {
       return;
     }
@@ -897,7 +902,7 @@ export default function CreateFundraiser() {
         body: JSON.stringify({
           title: formData.name,
           content: formData.description,
-          userId: formData.walletAddress,
+          userId: address,
           category: formData.category,
           location: formData.location,
           goal: formData.goal,

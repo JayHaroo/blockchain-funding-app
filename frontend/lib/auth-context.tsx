@@ -15,17 +15,13 @@ type User = {
   avatar?: string;
 };
 
-type UserWithPassword = User & {
-  password: string;
-};
-
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (email: string, password: string, name: string) => Promise<boolean>;
   signOut: () => void;
-  updateUser: (updates: Partial<User>) => void;
+  // updateUser: (updates: Partial<User>) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,26 +40,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (!user) {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      } else {
-      const fallbackAvatar = "/avatar.jpg";
-      const avatar = isValidImagePath(fallbackAvatar)
-        ? fallbackAvatar
-        : undefined;
+    // Initially, check if a user is logged in via the API
+    const fetchUser = async () => {
+      try {
+        const response = await fetch("http://localhost:3001/api/currentUser", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
 
-      setUser({
-        id: "default_user",
-        name: "John Doe",
-        email: "john.doe@example.com",
-        avatar,
-      });
-    }
-    setIsLoading(false);
-  }
+        // if (!response.ok) {
+        //   throw new Error("Failed to fetch user data");
+        // }
+
+        const data = await response.json();
+        const loggedInUser = data;
+
+        if (loggedInUser) {
+          setUser(loggedInUser);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUser();
   }, []);
 
   const SERVER_URL = "http://localhost:3001/api/login";
@@ -89,9 +96,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (!loggedInUser) {
         throw new Error("loggedInUser is undefined");
       }
-      
+
       const { password: _, ...userWithoutPassword } = loggedInUser;
-      
 
       if (
         userWithoutPassword.avatar &&
@@ -108,42 +114,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } finally {
       setIsLoading(false);
     }
-  }
-
-  // const signIn = async (email: string, password: string): Promise<boolean> => {
-  //   setIsLoading(true);
-  //   try {
-  //     await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  //     const users = JSON.parse(
-  //       localStorage.getItem("users") || "[]"
-  //     ) as UserWithPassword[];
-  //     const foundUser = users.find(
-  //       (u) => u.email === email && u.password === password
-  //     );
-
-  //     if (!foundUser) throw new Error("Invalid email or password");
-
-  //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  //     const { password: _, ...userWithoutPassword } = foundUser;
-
-  //     if (
-  //       userWithoutPassword.avatar &&
-  //       !isValidImagePath(userWithoutPassword.avatar)
-  //     ) {
-  //       userWithoutPassword.avatar = undefined;
-  //     }
-
-  //     localStorage.setItem("user", JSON.stringify(userWithoutPassword));
-  //     setUser(userWithoutPassword);
-  //     return true;
-  //   } catch (error) {
-  //     console.error("Sign in error:", error);
-  //     return false;
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
+  };
 
   const signUp = async (
     email: string,
@@ -152,29 +123,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   ): Promise<boolean> => {
     setIsLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await fetch("http://localhost:3001/api/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, name }),
+      });
 
-      const users = JSON.parse(
-        localStorage.getItem("users") || "[]"
-      ) as UserWithPassword[];
-      const userExists = users.some((u) => u.email === email);
-      if (userExists) throw new Error("User already exists");
+      if (!response.ok) {
+        throw new Error("Failed to sign up");
+      }
 
-      const avatar = "/avatar.jpg";
-      const newUser = {
-        id: `user_${Date.now()}`,
-        email,
-        password,
-        name,
-        avatar: isValidImagePath(avatar) ? avatar : undefined,
-      };
+      const data = await response.json();
+      const newUser = data;
 
-      localStorage.setItem("users", JSON.stringify([...users, newUser]));
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password: _, ...userWithoutPassword } = newUser;
 
-      localStorage.setItem("user", JSON.stringify(userWithoutPassword));
       setUser(userWithoutPassword);
       return true;
     } catch (error) {
@@ -186,70 +151,40 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signOut = () => {
-    localStorage.removeItem("user");
-    setUser(null);
+    // Sign out from the API
+    fetch("http://localhost:3001/api/logout", {
+      method: "POST",
+    })
+      .then(() => setUser(null))
+      .catch((error) => console.error("Sign out error:", error));
   };
 
-  const updateUser = (updates: Partial<User>) => {
-    if (user) {
-      let avatar = updates.avatar;
-      if (avatar && !isValidImagePath(avatar) && !avatar.startsWith('data:image/')) {
-        avatar = undefined;
-      }
+  // const updateUser = async (updates: Partial<User>) => {
+  //   if (user) {
+  //     try {
+  //       const response = await fetch(`http://localhost:3001/api/updateUser`, {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify({ ...user, ...updates }),
+  //       });
 
-      const updatedUser = { ...user, ...updates, avatar };
+  //       if (!response.ok) {
+  //         throw new Error("Failed to update user");
+  //       }
 
-      setUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-
-      const users = JSON.parse(
-        localStorage.getItem("users") || "[]"
-      ) as UserWithPassword[];
-      const updatedUsers = users.map((u) =>
-        u.id === user.id ? { ...u, ...updates, avatar } : u
-      );
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
-
-      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-      userData.avatar = avatar;
-      localStorage.setItem('userData', JSON.stringify(userData));
-
-      try {
-        const projectsData = JSON.parse(localStorage.getItem('projectsData') || '{}');
-        const updatedProjects = Object.entries(projectsData).reduce<Record<string, unknown>>((acc, [key, project]) => {
-          const typedProject = project as { organizer: string; organizerAvatar: string };
-          if (typedProject.organizer === user.name) {
-            acc[key] = {
-              ...typedProject,
-              organizerAvatar: avatar
-            };
-          } else {
-            acc[key] = project;
-          }
-          return acc;
-        }, {});
-        localStorage.setItem('projectsData', JSON.stringify(updatedProjects));
-
-        const fundraisers = JSON.parse(localStorage.getItem('fundraisers') || '[]');
-        const updatedFundraisers = fundraisers.map((fundraiser: { organizer: string; organizerAvatar: string }) => {
-          if (fundraiser.organizer === user.name) {
-            return {
-              ...fundraiser,
-              organizerAvatar: avatar
-            };
-          }
-          return fundraiser;
-        });
-        localStorage.setItem('fundraisers', JSON.stringify(updatedFundraisers));
-      } catch (error) {
-        console.error('Error updating projects with new profile picture:', error);
-      }
-    }
-  };
+  //       const updatedUser = await response.json();
+  //       setUser(updatedUser);
+  //     } catch (error) {
+  //       console.error("Error updating user:", error);
+  //     }
+  //   }
+  // };
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, signIn, signUp, signOut, updateUser }}
+      value={{ user, isLoading, signIn, signUp, signOut }}
     >
       {children}
     </AuthContext.Provider>

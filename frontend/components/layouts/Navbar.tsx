@@ -97,12 +97,12 @@ export function Navbar() {
 
         <div className="flex items-center gap-4">
           {user ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 w-f">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-2 text-white hover:bg-[#3A3B3C]"
+                    className="flex items-center gap-2 text-white hover:bg-[#3A3B3C] w-[120px]"
                   >
                     {user.avatar ? (
                       <Image
@@ -115,7 +115,11 @@ export function Navbar() {
                     ) : (
                       <User className="h-5 w-5" />
                     )}
-                    <div className="text-white">{user.name}</div>
+                    {user.name ? (
+                      <span className="text-sm text-white">{user.name}</span>
+                    ) : (
+                      <span className="text-sm text-white">User</span>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-48 bg-[#242526] text-white border border-[#3A3B3C] rounded-xl">

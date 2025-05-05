@@ -115,7 +115,7 @@ export function Navbar() {
                     ) : (
                       <User className="h-5 w-5" />
                     )}
-                    <span className="hidden md:inline text-white">{user.name}</span>
+                    <div className="text-white">{user.name}</div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-48 bg-[#242526] text-white border border-[#3A3B3C] rounded-xl">

@@ -63,22 +63,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setIsLoading(false);
   }, []);
 
+  const SERVER_URL = "http://localhost:3001/api/login";
+
   const signIn = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await fetch(SERVER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      const users = JSON.parse(
-        localStorage.getItem("users") || "[]"
-      ) as UserWithPassword[];
-      const foundUser = users.find(
-        (u) => u.email === email && u.password === password
-      );
+      if (!response.ok) {
+        throw new Error("Invalid email or password");
+      }
 
-      if (!foundUser) throw new Error("Invalid email or password");
+      const data = await response.json();
+      const { user: loggedInUser } = data;
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password: _, ...userWithoutPassword } = foundUser;
+      const { password: _, ...userWithoutPassword } = loggedInUser;
 
       if (
         userWithoutPassword.avatar &&
@@ -96,7 +102,42 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
+
+  // const signIn = async (email: string, password: string): Promise<boolean> => {
+  //   setIsLoading(true);
+  //   try {
+  //     await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  //     const users = JSON.parse(
+  //       localStorage.getItem("users") || "[]"
+  //     ) as UserWithPassword[];
+  //     const foundUser = users.find(
+  //       (u) => u.email === email && u.password === password
+  //     );
+
+  //     if (!foundUser) throw new Error("Invalid email or password");
+
+  //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  //     const { password: _, ...userWithoutPassword } = foundUser;
+
+  //     if (
+  //       userWithoutPassword.avatar &&
+  //       !isValidImagePath(userWithoutPassword.avatar)
+  //     ) {
+  //       userWithoutPassword.avatar = undefined;
+  //     }
+
+  //     localStorage.setItem("user", JSON.stringify(userWithoutPassword));
+  //     setUser(userWithoutPassword);
+  //     return true;
+  //   } catch (error) {
+  //     console.error("Sign in error:", error);
+  //     return false;
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   const signUp = async (
     email: string,

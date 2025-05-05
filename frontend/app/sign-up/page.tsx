@@ -18,36 +18,11 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-
-  const checkWalletConnection = async () => {
-    if (!isWalletConnected) {
-      const account = getAccount();
-      if (account) {
-        setWalletAddress(account.address || "");
-        setIsWalletConnected(true);
-      }
-      else {
-        setError("Please connect your wallet");
-        return;
-      }
-    }
-  }
 
   const SERVER_URL = 'http://localhost:3001/api/register';
 
 
   const handleSignUp = async () => {
-    checkWalletConnection();
-    if (!isWalletConnected) {
-      setError("Please connect your wallet");
-      return;
-    }
-    if (!name || !email || !password || !confirmPassword) {
-      setError("All fields are required");
-      return;
-    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");

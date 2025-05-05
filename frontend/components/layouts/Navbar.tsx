@@ -96,6 +96,44 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
+          {user ? (
+            <div className="flex items-center gap-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 text-white hover:bg-[#3A3B3C]"
+                  >
+                    {user.avatar ? (
+                      <Image
+                        src={user.avatar}
+                        alt="Avatar"
+                        width={32}
+                        height={32}
+                        className="rounded-full"
+                      />
+                    ) : (
+                      <User className="h-5 w-5" />
+                    )}
+                    <span className="hidden md:inline text-white">{user.name}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-48 bg-[#242526] text-white border border-[#3A3B3C] rounded-xl">
+                  <DropdownMenuItem className="py-2 px-4 hover:bg-[#3A3B3C] cursor-pointer">
+                    <Link href="/profile" className="w-full block">
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="py-2 px-4 hover:bg-[#3A3B3C] cursor-pointer"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" /> Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
             <div className="flex items-center gap-2">
               <Link href="/sign-in">
                 <Button
@@ -111,7 +149,8 @@ export function Navbar() {
                 </Button>
               </Link>
             </div>
-            
+          )}
+
           {/* Connect Wallet Button */}
           <div className="ml-4">
             <div className="bg-transparent text-white hover:bg-[#3A3B3C] focus:ring-2 focus:ring-blue-500 rounded-full">

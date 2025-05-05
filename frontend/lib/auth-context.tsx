@@ -45,9 +45,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
+    if (!user) {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
       const fallbackAvatar = "/avatar.jpg";
       const avatar = isValidImagePath(fallbackAvatar)
         ? fallbackAvatar
@@ -61,6 +63,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
     }
     setIsLoading(false);
+  }
   }, []);
 
   const SERVER_URL = "http://localhost:3001/api/login";
@@ -81,10 +84,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       const data = await response.json();
-      const { user: loggedInUser } = data;
+      const loggedInUser = data;
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      if (!loggedInUser) {
+        throw new Error("loggedInUser is undefined");
+      }
+      
       const { password: _, ...userWithoutPassword } = loggedInUser;
+      
 
       if (
         userWithoutPassword.avatar &&
@@ -93,7 +100,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         userWithoutPassword.avatar = undefined;
       }
 
-      localStorage.setItem("user", JSON.stringify(userWithoutPassword));
       setUser(userWithoutPassword);
       return true;
     } catch (error) {

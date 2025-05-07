@@ -13,14 +13,13 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ConnectButton } from "@rainbow-me/rainbowkit"; // Import ConnectButton
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 export function Navbar() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, isLoading, signOut } = useAuth();
   const [scrolled, setScrolled] = useState(false);
 
-  // Add scroll effect
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
@@ -96,8 +95,13 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
-          {user ? (
-            <div className="flex items-center gap-4 w-f">
+          {isLoading ? (
+            <div className="flex items-center gap-3 animate-pulse">
+              <div className="h-8 w-8 rounded-full bg-gray-600"></div>
+              <div className="h-4 w-20 rounded bg-gray-600"></div>
+            </div>
+          ) : user ? (
+            <div className="flex items-center gap-4 w-full">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -115,11 +119,9 @@ export function Navbar() {
                     ) : (
                       <User className="h-5 w-5" />
                     )}
-                    {user.name ? (
-                      <span className="text-sm text-white">{user.name}</span>
-                    ) : (
-                      <span className="text-sm text-white">User</span>
-                    )}
+                    <span className="text-sm text-white">
+                      {user.name || "User"}
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-48 bg-[#242526] text-white border border-[#3A3B3C] rounded-xl">

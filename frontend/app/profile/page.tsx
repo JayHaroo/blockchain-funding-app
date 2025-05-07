@@ -20,7 +20,7 @@ interface Fundraiser {
 }
 
 // Update the component to include profile picture upload functionality
-export default function ProfilePage() {
+export default function ProfilePage({userId}: {userId: string}) {
   const router = useRouter();
   const { user, isLoading, updateUser } = useAuth();
   const [bio, setBio] = useState(

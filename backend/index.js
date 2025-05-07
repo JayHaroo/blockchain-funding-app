@@ -87,6 +87,22 @@ app.get('/posts', async (req, res) => {
   }
 });
 
+app.get('/user/:id', async (req, res) => {
+  const userId = req.params.id;
+  try {
+    const user = await userCollection.findOne({ _id: new ObjectId(userId) });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    // Exclude the password before sending back the user data
+    const { password, ...userWithoutPassword } = user;
+    res.status(200).json(userWithoutPassword);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // New endpoint for getting the current user
 app.get('/api/currentUser', async (req, res) => {
   const userId = req.headers['user-id']; // or get it from session/token (example, using headers here for simplicity)

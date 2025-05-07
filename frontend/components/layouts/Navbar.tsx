@@ -19,6 +19,7 @@ export function Navbar() {
   const router = useRouter();
   const { user, isLoading, signOut } = useAuth();
   const [scrolled, setScrolled] = useState(false);
+  const userId = user?.id || null;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -126,7 +127,7 @@ export function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-48 bg-[#242526] text-white border border-[#3A3B3C] rounded-xl">
                   <DropdownMenuItem className="py-2 px-4 hover:bg-[#3A3B3C] cursor-pointer">
-                    <Link href="/profile" className="w-full block">
+                    <Link href='/profile' className="w-full block">
                       Profile
                     </Link>
                   </DropdownMenuItem>
